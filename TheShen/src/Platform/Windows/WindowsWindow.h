@@ -3,8 +3,6 @@
 #include "Core/Window.h"
 #include <GLFW/glfw3.h>
 
-#include "Renderer/GraphicsContext.h"
-
 class WindowsWindow :public Window
 {
 public:
@@ -36,7 +34,6 @@ private:
 
 private:
 	GLFWwindow* m_Window;
-	Scope<GraphicsContext> m_Context;
 
 	struct WindowData
 	{

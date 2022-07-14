@@ -47,10 +47,6 @@ void WindowsWindow::Init(const WindowProps& props) {
 	glfwSetCursorPosCallback(m_Window, ki_mousesmovefun);
 
 	glfwSetKeyCallback(m_Window, ki_keyfun);
-
-	m_Context = GraphicsContext::Create(m_Window);
-	m_Context->Init();
-
 }
 
 void WindowsWindow::ki_mousebuttonfun(GLFWwindow* glfwwin, int button, int action, int mods)
@@ -137,7 +133,6 @@ void WindowsWindow::ki_windowresizefun(GLFWwindow* glfwwin, int width, int heigh
 void WindowsWindow::OnUpdate()
 {
 	glfwPollEvents();
-	m_Context->SwapBuffers();
 }
 
 void WindowsWindow::SetVSync(bool enabled)

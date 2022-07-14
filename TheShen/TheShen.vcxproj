@@ -116,10 +116,7 @@
     <ClInclude Include="src\ImGui\example\imgui_impl_glfw.h" />
     <ClInclude Include="src\ImGui\example\imgui_impl_vulkan.h" />
     <ClInclude Include="src\Platform\Windows\WindowsWindow.h" />
-    <ClInclude Include="src\Renderer\GraphicsContext.h" />
-    <ClInclude Include="src\Renderer\RenderCommand.h" />
     <ClInclude Include="src\Renderer\Renderer.h" />
-    <ClInclude Include="src\Renderer\RendererAPI.h" />
     <ClInclude Include="src\Shen.h" />
     <ClInclude Include="src\TheShen.h" />
   </ItemGroup>
@@ -132,10 +129,7 @@
     <ClCompile Include="src\ImGui\example\imgui_impl_glfw.cpp" />
     <ClCompile Include="src\ImGui\example\imgui_impl_vulkan.cpp" />
     <ClCompile Include="src\Platform\Windows\WindowsWindow.cpp" />
-    <ClCompile Include="src\Renderer\GraphicsContext.cpp" />
-    <ClCompile Include="src\Renderer\RenderCommand.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
-    <ClCompile Include="src\Renderer\RendererAPI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\vendor\GLFW\GLFW.vcxproj">
