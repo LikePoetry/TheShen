@@ -11,7 +11,7 @@
 
 		m_Window->SetEventCallback(SHEN_BIND_EVENT_FN(OnEvent));
 
-		Renderer::Init();
+		IRenderer::Init();
 
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
@@ -27,8 +27,6 @@
 			float time = (float)glfwGetTime();
 			Timestep timestep = time - m_LastFrameTime;
 			m_LastFrameTime = time;
-
-			
 
 			if (!m_Minimized)
 			{

@@ -1,6 +1,6 @@
 #include "Renderer.h"
 
-void Renderer::Init()
+void IRenderer::Init()
 {
 
 }
