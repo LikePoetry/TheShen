@@ -101,7 +101,7 @@
     <ClInclude Include="..\Vendor\tinyobjloader\tiny_obj_loader.h" />
     <ClInclude Include="src\Core\Application.h" />
     <ClInclude Include="src\Core\Base.h" />
-    <ClInclude Include="src\Core\EntryPoint.h" />
+    <ClInclude Include="src\Core\App.h" />
     <ClInclude Include="src\Core\Layer.h" />
     <ClInclude Include="src\Core\LayerStack.h" />
     <ClInclude Include="src\Core\Log.h" />
@@ -117,7 +117,6 @@
     <ClInclude Include="src\ImGui\example\imgui_impl_vulkan.h" />
     <ClInclude Include="src\Platform\Windows\WindowsWindow.h" />
     <ClInclude Include="src\Renderer\Renderer.h" />
-    <ClInclude Include="src\Shen.h" />
     <ClInclude Include="src\TheShen.h" />
   </ItemGroup>
   <ItemGroup>

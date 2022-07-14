@@ -9,12 +9,13 @@
 
 #include "ImGui/ImGuiLayer.h"
 #include "LayerStack.h"
+#include "Core/App.h"
 
 
 class Application
 {
 public:
-	Application();
+	Application(int argc, char** argv, App* app);
 	virtual ~Application();
 	void Close();
 
@@ -47,6 +48,3 @@ private:
 	LayerStack m_LayerStack;
 
 };
-
-// To be defined in CLIENT
-Application* CreateApplication();

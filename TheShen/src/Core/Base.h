@@ -6,6 +6,9 @@
 
 #define SHEN_BIND_EVENT_FN(fn) [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
 
+#define THESHEN_BIND_EVENT_FN(fn) (auto&&... args) -> decltype(auto) { fn(std::forward<decltype(args)>(args)...); }
+
+
 #define SHEN_CORE_ASSERT(x,...){if(!(x)) {SHEN_CORE_ERROR("Assertion Failed: {0}",__VA_ARGS__);__debugbreak();}} 
 #define SHEN_CLIENT_ASSERT(x,...){if(!(x)) {SHEN_CLIENT_ERROR("Assertion Failed: {0}",__VA_ARGS__);__debugbreak();}} 
 

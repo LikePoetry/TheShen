@@ -28,18 +28,6 @@
     <Filter Include="src\Platform">
       <UniqueIdentifier>{21CA02E5-0D2D-9289-B6B2-CA3FA2F45D0C}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\Platform\Vulkan">
-      <UniqueIdentifier>{81084748-ED69-2456-76D7-6A08E2375B15}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Platform\Vulkan\Framework">
-      <UniqueIdentifier>{3EDA2AA4-AAF2-11CE-739F-A167DF76A667}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Platform\Vulkan\VulkanCommon">
-      <UniqueIdentifier>{6A25B4B9-5676-9FFB-7FDA-8DBD6B8A3265}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\Platform\Vulkan\VulkanLib">
-      <UniqueIdentifier>{78CC7FFA-E4E4-6624-AD91-F6BD1969FBBD}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\Platform\Windows">
       <UniqueIdentifier>{5B054582-4794-CE4B-F0B2-E246DC20DFF1}</UniqueIdentifier>
     </Filter>
@@ -60,7 +48,7 @@
     <ClInclude Include="src\Core\Base.h">
       <Filter>src\Core</Filter>
     </ClInclude>
-    <ClInclude Include="src\Core\EntryPoint.h">
+    <ClInclude Include="src\Core\App.h">
       <Filter>src\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\Core\Layer.h">
@@ -108,10 +96,9 @@
     <ClInclude Include="src\Renderer\Renderer.h">
       <Filter>src\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="src\Shen.h">
+    <ClInclude Include="src\TheShen.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\TheShen.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp">

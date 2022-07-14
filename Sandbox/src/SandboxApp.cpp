@@ -1,22 +1,23 @@
 ﻿#include <TheShen.h>
-#include "Core/EntryPoint.h"
+#include "Core/App.h"
 #include "TestLayer.h"
+#include "Renderer/Renderer.h"
 
 
-class Sandbox :public Application
+Renderer* pRenderer = NULL;
+
+class Sandbox :public App
 {
 public:
-	Sandbox() {
-		PushLayer(new TestLayer());
-	};
-
-	~Sandbox() {
-	};
+	bool Init() override 
+	{
+		Application::Get().PushLayer(new TestLayer());
+		return 0;
+	}
 
 private:
 
 };
 
-Application* CreateApplication() {
-	return new Sandbox();
-}
+
+DEFINE_APPLICATION_MAIN(Sandbox)
