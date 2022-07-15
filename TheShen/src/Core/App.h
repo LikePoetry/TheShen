@@ -7,6 +7,9 @@ class App
 public:
 	virtual bool Init() = 0;
 
+	virtual bool Load() = 0;
+
+	virtual const char* GetName() = 0;
 
 	static int			argc;
 	static const char** argv;

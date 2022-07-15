@@ -28,6 +28,9 @@ public:
 	ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
 
 	Window& GetWindow() { return *m_Window; }
+
+	void* GetNativeWindow() { return m_Window->GetNativeWindow(); }
+
 	static Application& Get() { return *s_Instance; }
 
 	void Run();

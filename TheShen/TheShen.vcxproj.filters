@@ -90,7 +90,7 @@
     <ClInclude Include="src\ImGui\example\imgui_impl_vulkan.h">
       <Filter>src\ImGui\example</Filter>
     </ClInclude>
-    <ClInclude Include="src\Platform\Windows\WindowsWindow.h">
+    <ClInclude Include="src\Windows\WindowsWindow.h">
       <Filter>src\Platform\Windows</Filter>
     </ClInclude>
     <ClInclude Include="src\Renderer\Renderer.h">
@@ -122,7 +122,7 @@
     <ClCompile Include="src\ImGui\example\imgui_impl_vulkan.cpp">
       <Filter>src\ImGui\example</Filter>
     </ClCompile>
-    <ClCompile Include="src\Platform\Windows\WindowsWindow.cpp">
+    <ClCompile Include="src\Windows\WindowsWindow.cpp">
       <Filter>src\Platform\Windows</Filter>
     </ClCompile>
     <ClCompile Include="src\Renderer\Renderer.cpp">

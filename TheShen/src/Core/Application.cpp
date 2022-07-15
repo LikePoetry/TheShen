@@ -13,6 +13,8 @@ Application::Application(int argc, char** argv, App* app) {
 
 	app->Init();
 
+	app->Load();
+
 	m_ImGuiLayer = new ImGuiLayer();
 	PushOverlay(m_ImGuiLayer);
 }
@@ -84,6 +86,7 @@ bool Application::OnWindowClose(WindowCloseEvent& e)
 
 bool Application::OnWindowResize(WindowResizeEvent& e)
 {
+
 	return false;
 }
 
