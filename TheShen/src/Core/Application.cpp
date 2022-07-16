@@ -1,15 +1,25 @@
 #include "Application.h"
 #include "Renderer/Renderer.h"
 
+static App* pApp = nullptr;
 Application* Application::s_Instance = nullptr;
 Application::Application(int argc, char** argv, App* app) {
 	SHEN_CORE_ASSERT(!s_Instance, "Application already exists!");
 	s_Instance = this;
 
+	WindowProps windowProp;
+	windowProp.Height = 600;
+	windowProp.Width = 900;
+	windowProp.Title = app->GetName();
 
-	m_Window = std::unique_ptr<Window>(Window::Create());
+	app->mSettings.mHeight = windowProp.Height;
+	app->mSettings.mWidth = windowProp.Width;
+
+	m_Window = std::unique_ptr<Window>(Window::Create(windowProp));
 
 	m_Window->SetEventCallback(SHEN_BIND_EVENT_FN(OnEvent));
+
+	pApp = app;
 
 	app->Init();
 
@@ -55,7 +65,7 @@ void Application::Run() {
 void Application::OnEvent(Event& e)
 {
 	EventDispatcher dispatcher(e);
-	SHEN_CORE_INFO("{0}", e);
+	//SHEN_CORE_INFO("{0}", e);
 	dispatcher.Dispatch<WindowCloseEvent>(SHEN_BIND_EVENT_FN(Application::OnWindowClose));
 	dispatcher.Dispatch<WindowResizeEvent>(SHEN_BIND_EVENT_FN(Application::OnWindowResize));
 	for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
@@ -86,8 +96,9 @@ bool Application::OnWindowClose(WindowCloseEvent& e)
 
 bool Application::OnWindowResize(WindowResizeEvent& e)
 {
-
-	return false;
+	pApp->mSettings.mWidth = e.GetWidth();
+	pApp->mSettings.mHeight = e.GetHeight();
+	return true;
 }
 
 void Application::Close()

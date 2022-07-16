@@ -11,6 +11,14 @@ public:
 
 	virtual const char* GetName() = 0;
 
+	struct Settings
+	{
+		/// Window width
+		int32_t  mWidth = -1;
+		/// Window height
+		int32_t  mHeight = -1;
+	} mSettings;
+
 	static int			argc;
 	static const char** argv;
 };

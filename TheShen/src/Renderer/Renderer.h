@@ -1,10 +1,12 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
+#define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
-#include <optional>
-#include <set>
+
+
 /// <summary>
 /// 渲染初始化参数描述
 /// </summary>
@@ -103,14 +105,14 @@ typedef struct SwapChain
 	uint32_t       mPresentQueueFamilyIndex : 5;
 } SwapChain;
 
+
+
 /// <summary>
-/// 初始化绘图设备
+/// 初始化绘图设备,包含交换链的创建
 /// </summary>
 /// <param name="appName"></param>
 /// <param name="pSettings"></param>
 /// <param name="ppRenderer"></param>
-void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer);
+void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, const SwapChainDesc* p_desc, SwapChain** p_swap_chain);
 // 添加队列
 void addQueue(Renderer* pRenderer, QueueDesc* pQDesc, Queue** pQueue);
-//创建交换链
-void addSwapChain(Renderer* pRenderer, const SwapChainDesc* p_desc, SwapChain** p_swap_chain);

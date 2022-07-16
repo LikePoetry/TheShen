@@ -1,8 +1,20 @@
 #include "Renderer.h"
 #include "Core/Log.h"
-#include <vector>
-#include <stdexcept>
+
+
 #include <iostream>
+#include <fstream>
+#include <stdexcept>
+#include <algorithm>
+#include <chrono>
+#include <vector>
+#include <cstring>
+#include <cstdlib>
+#include <cstdint>
+#include <limits>
+#include <array>
+#include <optional>
+#include <set>
 
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
@@ -164,13 +176,166 @@ bool SelectIndexOfQueueFamilyWithDesiredCapabilities(VkPhysicalDevice   physical
 	return false;
 }
 
+struct QueueFamilyIndices {
+	std::optional<uint32_t> graphicsFamily;
+	std::optional<uint32_t> presentFamily;
+
+	bool isComplete() {
+		return graphicsFamily.has_value() && presentFamily.has_value();
+	}
+};
+
+/// <summary>
+/// 交换链支持的细节信息
+/// </summary>
+struct SwapChainSupportDetails {
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentModes;
+};
+
+QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+	int i = 0;
+	for (const auto& queueFamily : queueFamilies) {
+		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.graphicsFamily = i;
+		}
+
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+
+		if (presentSupport) {
+			indices.presentFamily = i;
+		}
+
+		if (indices.isComplete()) {
+			break;
+		}
+
+		i++;
+	}
+
+	return indices;
+}
+
+bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
+	uint32_t extensionCount;
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+	for (const auto& extension : availableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+	}
+
+	return requiredExtensions.empty();
+}
+
+/// <summary>
+/// 查询交换链支持的细节信息
+/// </summary>
+/// <param name="device">物理设备</param>
+/// <param name="surface">显示表面</param>
+/// <returns></returns>
+SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
+	SwapChainSupportDetails details;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+
+	if (formatCount != 0) {
+		details.formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+	}
+
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+
+	if (presentModeCount != 0) {
+		details.presentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+	}
+
+	return details;
+}
+
+bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+	QueueFamilyIndices indices = findQueueFamilies(device, surface);
+
+	bool extensionsSupported = checkDeviceExtensionSupport(device);
+
+	bool swapChainAdequate = false;
+	if (extensionsSupported) {
+		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device, surface);
+		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+	}
+
+	VkPhysicalDeviceFeatures supportedFeatures;
+	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+	return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+}
+
+VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+	for (const auto& availableFormat : availableFormats) {
+		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+			return availableFormat;
+		}
+	}
+
+	return availableFormats[0];
+}
+
+VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+	for (const auto& availablePresentMode : availablePresentModes) {
+		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+			return availablePresentMode;
+		}
+	}
+
+	return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities) {
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+		return capabilities.currentExtent;
+	}
+	else {
+		int width, height;
+		glfwGetFramebufferSize(window, &width, &height);
+
+		VkExtent2D actualExtent = {
+			static_cast<uint32_t>(width),
+			static_cast<uint32_t>(height)
+		};
+
+		actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+		actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+		return actualExtent;
+	}
+}
+
 /// <summary>
 /// 初始化渲染配置信息
 /// </summary>
 /// <param name="appName"></param>
 /// <param name="pSettings"></param>
 /// <param name="ppRenderer"></param>
-void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer)
+void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, const SwapChainDesc* pDesc, SwapChain** ppSwapChain)
 {
 	//初始化ppRenderer
 	Renderer pRenderer;
@@ -232,7 +397,18 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		}
 	}
 
-	//选取设备
+	//创建surface
+	SwapChain pSwapChain;
+	{
+
+		memset(&pSwapChain, 0, sizeof(pSwapChain));
+		if (glfwCreateWindowSurface(pRenderer.pVkInstance, (GLFWwindow*)pDesc->mWindow, nullptr, &pSwapChain.pVkSurface) != VK_SUCCESS) {
+			SHEN_CORE_ERROR("failed to create window surface!");
+			throw std::runtime_error("failed to create window surface!");
+		}
+	}
+
+	//选取物理设备
 	{
 		//获取设备的数量
 		uint32_t deviceCount = 0;
@@ -250,30 +426,20 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		//选取支持 图像，计算和演示功能的显卡
 		for (const auto& device : devices)
 		{
-			if (!SelectIndexOfQueueFamilyWithDesiredCapabilities(device, VK_QUEUE_GRAPHICS_BIT, pRenderer.pVkGraphicsQueueFamilyIndex)) {
-				continue;
+			if (isDeviceSuitable(device, pSwapChain.pVkSurface)) {
+				pRenderer.pVkActiveGPU = device;
+				break;
 			}
-			if (!SelectIndexOfQueueFamilyWithDesiredCapabilities(device, VK_QUEUE_COMPUTE_BIT, pRenderer.pVkComputeQueueFamilyIndex)) {
-				continue;
-			}
-			if (!SelectIndexOfQueueFamilyWithDesiredCapabilities(device, VK_QUEUE_TRANSFER_BIT, pRenderer.pVkTransferQueueFamilyIndex)) {
-				continue;
-			}
-			pRenderer.pVkActiveGPU = device;
-			break;
 		}
 	}
 
 	//创建逻辑设备
 	{
-		//获取设备队列族信息
-		uint32_t queueFamiliesCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(pRenderer.pVkActiveGPU, &queueFamiliesCount, NULL);
-		std::vector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(pRenderer.pVkActiveGPU, &queueFamiliesCount, queueFamiliesProperties.data());
+		QueueFamilyIndices indices = findQueueFamilies(pRenderer.pVkActiveGPU, pSwapChain.pVkSurface);
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		std::set<uint32_t> uniqueQueueFamilies = { pRenderer.pVkGraphicsQueueFamilyIndex, pRenderer.pVkComputeQueueFamilyIndex,pRenderer.pVkTransferQueueFamilyIndex };
+		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
 			VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -307,11 +473,18 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		}
 
 		if (vkCreateDevice(pRenderer.pVkActiveGPU, &createInfo, nullptr, &pRenderer.pVkDevice) != VK_SUCCESS) {
-			SHEN_CORE_ERROR("failed to create logical device!");
 			throw std::runtime_error("failed to create logical device!");
 		}
 	}
+
+	//创建交换链
+	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(pRenderer.pVkActiveGPU, pSwapChain.pVkSurface);
+	VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+	VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+	VkExtent2D extent = chooseSwapExtent((GLFWwindow*)pDesc->mWindow, swapChainSupport.capabilities);
+
 	*ppRenderer = &pRenderer;
+	*ppSwapChain = &pSwapChain;
 }
 
 void uitil_find_queue_family_index(const Renderer* pRenderer, QueueType queueType, uint32_t* pOutFamilyIndex)
@@ -341,22 +514,3 @@ void addQueue(Renderer* pRenderer, QueueDesc* pDesc, Queue** ppQueue)
 	*ppQueue = &pQueue;
 }
 
-/// <summary>
-/// 创建交换链
-/// </summary>
-/// <param name="pRenderer"></param>
-/// <param name="p_desc"></param>
-/// <param name="p_swap_chain"></param>
-void addSwapChain(Renderer* pRenderer, const SwapChainDesc* pDesc, SwapChain** ppSwapChain)
-{
-	//创建surface
-	SwapChain pSwapChain;
-	memset(&pSwapChain, 0, sizeof(pSwapChain));
-	if (glfwCreateWindowSurface(pRenderer->pVkInstance, (GLFWwindow*)pDesc->mWindow, nullptr, &pSwapChain.pVkSurface) != VK_SUCCESS) {
-		SHEN_CORE_ERROR("failed to create window surface!");
-		throw std::runtime_error("failed to create window surface!");
-	}
-
-	//创建交换链
-
-}

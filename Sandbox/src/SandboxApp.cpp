@@ -18,17 +18,23 @@ public:
 		//初始化Instance 到 LogicalDevice
 		RendererDesc settings;
 		memset(&settings, 0, sizeof(settings));
-		initRenderer(GetName(), &settings, &pRenderer);
+
+		SwapChainDesc swapChainDesc = {};
+		swapChainDesc.mWindow = Application::Get().GetNativeWindow();
+		swapChainDesc.mHeight = mSettings.mHeight;
+		swapChainDesc.mWidth = mSettings.mWidth;
+
+		initRenderer(GetName(), &settings, &pRenderer, &swapChainDesc, &pSwapChain);
 		if (!pRenderer)
 		{
 			return false;
 		}
 
-		//添加图形队列
-		QueueDesc queueDesc = {};
-		queueDesc.mType = QUEUE_TYPE_GRAPHICS;
-		queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
-		addQueue(pRenderer, &queueDesc, &pGraphicsQueue);
+		////添加图形队列
+		//QueueDesc queueDesc = {};
+		//queueDesc.mType = QUEUE_TYPE_GRAPHICS;
+		//queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
+		//addQueue(pRenderer, &queueDesc, &pGraphicsQueue);
 
 
 
@@ -38,16 +44,6 @@ public:
 
 	bool Load() override
 	{
-		if (!addSwapChain())
-			return false;
-	}
-
-	bool addSwapChain()
-	{
-		SwapChainDesc swapChainDesc = {};
-		swapChainDesc.mWindow = Application::Get().GetNativeWindow();
-		::addSwapChain(pRenderer, &swapChainDesc, &pSwapChain);
-
 		return true;
 	}
 
