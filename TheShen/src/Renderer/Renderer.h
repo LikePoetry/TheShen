@@ -26,6 +26,8 @@ typedef struct Renderer
 	uint32_t							pVkGraphicsQueueFamilyIndex;
 	uint32_t							pVkComputeQueueFamilyIndex;
 	uint32_t							pVkTransferQueueFamilyIndex;
+	//uint32_t							pVkPresentQueueFamilyIndex;
+
 } Renderer;
 
 typedef enum QueueType
@@ -77,16 +79,14 @@ typedef struct SwapChainDesc
 {
 	/// Window handle
 	void* mWindow;
-	/// Queues which should be allowed to present
-	Queue** ppPresentQueues;
-	/// Number of present queues
-	uint32_t mPresentQueueCount;
 	/// Number of backbuffers in this swapchain
 	uint32_t mImageCount;
 	/// Width of the swapchain
 	uint32_t mWidth;
 	/// Height of the swapchain
 	uint32_t mHeight;
+	VkFormat mImageFormat;
+	VkExtent2D mExtend2D;
 	/// Swapchain creation flags
 	SwapChainCreationFlags mFlags;
 	/// Set whether swap chain will be presented using vsync
@@ -99,12 +99,22 @@ typedef struct SwapChainDesc
 /// </summary>
 typedef struct SwapChain
 {
-	VkQueue        pPresentQueue;
 	VkSwapchainKHR pSwapChain;
 	VkSurfaceKHR   pVkSurface;
+	VkQueue			pPresentQueue;
 	uint32_t       mPresentQueueFamilyIndex : 5;
+	SwapChainDesc* pDesc;
 } SwapChain;
 
+typedef struct Texture
+{
+
+}Texture;
+
+typedef struct Rendertarget
+{
+
+}Rendertarget;
 
 
 /// <summary>

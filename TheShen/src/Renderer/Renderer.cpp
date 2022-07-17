@@ -310,7 +310,7 @@ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& avai
 }
 
 VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities) {
-	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+	if (capabilities.currentExtent.width != (std::numeric_limits<uint32_t>::max)()) {
 		return capabilities.currentExtent;
 	}
 	else {
@@ -345,8 +345,9 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		SHEN_CORE_ERROR("validation layers requested, but not available!");
 		throw std::runtime_error("validation layers requested, but not available!");
 	}
+	//应用信息
 	{
-		//应用信息
+
 		VkApplicationInfo appInfo{};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		appInfo.pApplicationName = appName;
@@ -440,6 +441,12 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
+		//图像队列索引
+		pRenderer.pVkGraphicsQueueFamilyIndex = indices.graphicsFamily.value();
+
+		//演示队列索引
+		pSwapChain.mPresentQueueFamilyIndex = indices.presentFamily.value();
+
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
 			VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -476,12 +483,77 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 			throw std::runtime_error("failed to create logical device!");
 		}
 	}
+	{
 
-	//创建交换链
-	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(pRenderer.pVkActiveGPU, pSwapChain.pVkSurface);
-	VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-	VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-	VkExtent2D extent = chooseSwapExtent((GLFWwindow*)pDesc->mWindow, swapChainSupport.capabilities);
+		//创建交换链
+		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(pRenderer.pVkActiveGPU, pSwapChain.pVkSurface);
+		VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+		VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+		VkExtent2D extent = chooseSwapExtent((GLFWwindow*)pDesc->mWindow, swapChainSupport.capabilities);
+
+		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+		if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+			imageCount = swapChainSupport.capabilities.maxImageCount;
+		}
+
+		VkSwapchainCreateInfoKHR createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		createInfo.surface = pSwapChain.pVkSurface;
+
+		createInfo.minImageCount = imageCount;
+		createInfo.imageFormat = surfaceFormat.format;
+		createInfo.imageColorSpace = surfaceFormat.colorSpace;
+		createInfo.imageExtent = extent;
+		createInfo.imageArrayLayers = 1;
+		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+		if (swapChainSupport.capabilities.supportedTransforms & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+		{
+			createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		}
+
+		// Enable transfer destination on swap chain images if supported
+		if (swapChainSupport.capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+		{
+			createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		}
+
+		QueueFamilyIndices indices = findQueueFamilies(pRenderer.pVkActiveGPU, pSwapChain.pVkSurface);
+		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+		if (indices.graphicsFamily != indices.presentFamily) {
+			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			createInfo.queueFamilyIndexCount = 2;
+			createInfo.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else {
+			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
+
+		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		createInfo.presentMode = presentMode;
+		createInfo.clipped = VK_TRUE;
+
+		if (vkCreateSwapchainKHR(pRenderer.pVkDevice, &createInfo, nullptr, &pSwapChain.pSwapChain) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create swap chain!");
+		}
+
+		std::vector<VkImage> swapChainImages;
+		vkGetSwapchainImagesKHR(pRenderer.pVkDevice, pSwapChain.pSwapChain, &imageCount, nullptr);
+		swapChainImages.resize(imageCount);
+		vkGetSwapchainImagesKHR(pRenderer.pVkDevice, pSwapChain.pSwapChain, &imageCount, swapChainImages.data());
+		//交换链其他信息存储
+		pSwapChain.pDesc->mImageFormat = surfaceFormat.format;
+		pSwapChain.pDesc->mExtend2D = extent;
+		pSwapChain.pDesc->mImageCount = imageCount;
+
+
+		//创建演示队列
+		vkGetDeviceQueue(pRenderer.pVkDevice, pSwapChain.mPresentQueueFamilyIndex, 0, &pSwapChain.pPresentQueue);
+	}
+
+
 
 	*ppRenderer = &pRenderer;
 	*ppSwapChain = &pSwapChain;

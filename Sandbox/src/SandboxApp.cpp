@@ -30,11 +30,11 @@ public:
 			return false;
 		}
 
-		////添加图形队列
-		//QueueDesc queueDesc = {};
-		//queueDesc.mType = QUEUE_TYPE_GRAPHICS;
-		//queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
-		//addQueue(pRenderer, &queueDesc, &pGraphicsQueue);
+		//添加图形队列
+		QueueDesc queueDesc = {};
+		queueDesc.mType = QUEUE_TYPE_GRAPHICS;
+		queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
+		addQueue(pRenderer, &queueDesc, &pGraphicsQueue);
 
 
 
