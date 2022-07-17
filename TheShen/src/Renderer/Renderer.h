@@ -125,8 +125,17 @@ typedef struct SwapChain
 	SwapChainDesc* pDesc;
 } SwapChain;
 
+typedef struct RenderPassDesc
+{
+	VkFormat			pColorFormats;
+	uint32_t            mRenderTargetCount;
+} RenderPassDesc;
 
-
+typedef struct RenderPass
+{
+	VkRenderPass   pRenderPass;
+	RenderPassDesc mDesc;
+} RenderPass;
 
 /// <summary>
 /// 初始化绘图设备,包含交换链的创建
@@ -137,3 +146,5 @@ typedef struct SwapChain
 void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* p_desc, SwapChain** p_swap_chain, std::vector<Texture> pTextures);
 // 添加队列
 void addQueue(Renderer* pRenderer, QueueDesc* pQDesc, Queue** pQueue);
+
+void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass** ppRenderPass);
