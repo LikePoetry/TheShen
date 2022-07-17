@@ -2,19 +2,7 @@
 #include "Core/Log.h"
 
 
-#include <iostream>
-#include <fstream>
-#include <stdexcept>
-#include <algorithm>
-#include <chrono>
-#include <vector>
-#include <cstring>
-#include <cstdlib>
-#include <cstdint>
-#include <limits>
-#include <array>
-#include <optional>
-#include <set>
+
 
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
@@ -179,9 +167,12 @@ bool SelectIndexOfQueueFamilyWithDesiredCapabilities(VkPhysicalDevice   physical
 struct QueueFamilyIndices {
 	std::optional<uint32_t> graphicsFamily;
 	std::optional<uint32_t> presentFamily;
+	std::optional<uint32_t> computeFamily;
+	std::optional<uint32_t> transferFamily;
+
 
 	bool isComplete() {
-		return graphicsFamily.has_value() && presentFamily.has_value();
+		return graphicsFamily.has_value() && presentFamily.has_value() && computeFamily.has_value() && transferFamily.has_value();
 	}
 };
 
@@ -207,6 +198,14 @@ QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
 	for (const auto& queueFamily : queueFamilies) {
 		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.graphicsFamily = i;
+		}
+
+		if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
+			indices.computeFamily = i;
+		}
+
+		if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+			indices.transferFamily = i;
 		}
 
 		VkBool32 presentSupport = false;
@@ -272,7 +271,7 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurface
 	return details;
 }
 
-bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
+bool isDeviceSuitable(Renderer pRenderer, VkPhysicalDevice device, VkSurfaceKHR surface) {
 	QueueFamilyIndices indices = findQueueFamilies(device, surface);
 
 	bool extensionsSupported = checkDeviceExtensionSupport(device);
@@ -285,7 +284,9 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
 
 	VkPhysicalDeviceFeatures supportedFeatures;
 	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
-
+	pRenderer.pVkGraphicsQueueFamilyIndex = indices.graphicsFamily.value();
+	pRenderer.pVkComputeQueueFamilyIndex = indices.computeFamily.value();
+	pRenderer.pVkTransferQueueFamilyIndex = indices.transferFamily.value();
 	return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
@@ -335,7 +336,7 @@ VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& 
 /// <param name="appName"></param>
 /// <param name="pSettings"></param>
 /// <param name="ppRenderer"></param>
-void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, const SwapChainDesc* pDesc, SwapChain** ppSwapChain)
+void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* pDesc, SwapChain** ppSwapChain, std::vector<Texture> pTextures)
 {
 	//初始化ppRenderer
 	Renderer pRenderer;
@@ -427,7 +428,7 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		//选取支持 图像，计算和演示功能的显卡
 		for (const auto& device : devices)
 		{
-			if (isDeviceSuitable(device, pSwapChain.pVkSurface)) {
+			if (isDeviceSuitable(pRenderer, device, pSwapChain.pVkSurface)) {
 				pRenderer.pVkActiveGPU = device;
 				break;
 			}
@@ -483,9 +484,9 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 			throw std::runtime_error("failed to create logical device!");
 		}
 	}
-	{
 
-		//创建交换链
+	//创建交换链
+	{
 		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(pRenderer.pVkActiveGPU, pSwapChain.pVkSurface);
 		VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
 		VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -544,10 +545,37 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		swapChainImages.resize(imageCount);
 		vkGetSwapchainImagesKHR(pRenderer.pVkDevice, pSwapChain.pSwapChain, &imageCount, swapChainImages.data());
 		//交换链其他信息存储
-		pSwapChain.pDesc->mImageFormat = surfaceFormat.format;
-		pSwapChain.pDesc->mExtend2D = extent;
-		pSwapChain.pDesc->mImageCount = imageCount;
+		pTextures.resize(0);
+		for (uint32_t i = 0; i < swapChainImages.size(); i++) {
+			VkImageViewCreateInfo viewInfo{};
+			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			viewInfo.image = swapChainImages[i];
+			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			viewInfo.format = surfaceFormat.format;
+			viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			viewInfo.subresourceRange.baseMipLevel = 0;
+			viewInfo.subresourceRange.levelCount = 1;
+			viewInfo.subresourceRange.baseArrayLayer = 0;
+			viewInfo.subresourceRange.layerCount = 1;
 
+			VkImageView imageView;
+			if (vkCreateImageView(pRenderer.pVkDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create texture image view!");
+			}
+			Texture pTexture;
+			memset(&pTexture, 0, sizeof(pTexture));
+			pTexture.pVkImage = swapChainImages[i];
+			pTexture.pVkSRVDescriptor = imageView;
+
+			pTextures.push_back(pTexture);
+		}
+
+		pDesc->mImageFormat = surfaceFormat.format;
+		pDesc->mExtend2D = extent;
+		pDesc->mImageCount = imageCount;
+
+
+		pSwapChain.pDesc = pDesc;
 
 		//创建演示队列
 		vkGetDeviceQueue(pRenderer.pVkDevice, pSwapChain.mPresentQueueFamilyIndex, 0, &pSwapChain.pPresentQueue);

@@ -5,6 +5,19 @@
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
+#include <iostream>
+#include <fstream>
+#include <stdexcept>
+#include <algorithm>
+#include <chrono>
+#include <vector>
+#include <cstring>
+#include <cstdlib>
+#include <cstdint>
+#include <limits>
+#include <array>
+#include <optional>
+#include <set>
 
 
 /// <summary>
@@ -63,6 +76,12 @@ typedef struct Queue
 	VkQueue								pVkQueue;
 } Queue;
 
+typedef struct Texture
+{
+	VkImageView pVkSRVDescriptor;
+	VkImage pVkImage;
+}Texture;
+
 /// <summary>
 /// 创建交换链描述符时的Flag 信息;
 /// </summary>
@@ -92,7 +111,7 @@ typedef struct SwapChainDesc
 	/// Set whether swap chain will be presented using vsync
 	bool mEnableVsync;
 
-};
+} SwapChainDesc;
 
 /// <summary>
 /// 交换链
@@ -106,15 +125,7 @@ typedef struct SwapChain
 	SwapChainDesc* pDesc;
 } SwapChain;
 
-typedef struct Texture
-{
 
-}Texture;
-
-typedef struct Rendertarget
-{
-
-}Rendertarget;
 
 
 /// <summary>
@@ -123,6 +134,6 @@ typedef struct Rendertarget
 /// <param name="appName"></param>
 /// <param name="pSettings"></param>
 /// <param name="ppRenderer"></param>
-void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, const SwapChainDesc* p_desc, SwapChain** p_swap_chain);
+void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* p_desc, SwapChain** p_swap_chain, std::vector<Texture> pTextures);
 // 添加队列
 void addQueue(Renderer* pRenderer, QueueDesc* pQDesc, Queue** pQueue);

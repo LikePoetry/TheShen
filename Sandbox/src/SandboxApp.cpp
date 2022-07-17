@@ -9,6 +9,8 @@ Queue* pGraphicsQueue = NULL;
 
 SwapChain* pSwapChain = NULL;
 
+std::vector<Texture> pTextures;
+
 
 class Sandbox :public App
 {
@@ -24,7 +26,7 @@ public:
 		swapChainDesc.mHeight = mSettings.mHeight;
 		swapChainDesc.mWidth = mSettings.mWidth;
 
-		initRenderer(GetName(), &settings, &pRenderer, &swapChainDesc, &pSwapChain);
+		initRenderer(GetName(), &settings, &pRenderer, &swapChainDesc, &pSwapChain, pTextures);
 		if (!pRenderer)
 		{
 			return false;
