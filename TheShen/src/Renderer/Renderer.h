@@ -173,9 +173,16 @@ typedef enum ShaderStage
 	SHADER_STAGE_COUNT = 7,
 } ShaderStage;
 
+typedef struct ShaderDesc
+{
+	const char* pFileName;
+	ShaderStage	mStages : 31;
+};
+
 typedef struct Shader
 {
 	VkShaderModule* pShaderModules;
+	ShaderStage		mStages : 31;
 }Shader;
 
 /// <summary>
@@ -214,3 +221,5 @@ void addQueue(Renderer* pRenderer, QueueDesc* pQDesc, Queue** pQueue);
 void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass** ppRenderPass);
 //添加渲染管线
 void addPipeline(Renderer* pRenderer, const PipelineDesc* pDesc, Pipeline** ppPipeline);
+//添加着色器
+void addShader(Renderer* pRenderer, const ShaderDesc* pDesc, Shader** ppShader);

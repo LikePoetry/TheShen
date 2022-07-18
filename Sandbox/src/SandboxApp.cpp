@@ -100,10 +100,12 @@ public:
 		return shaderModule;
 	}
 
-	void createGraphicsPipeline() {
-
-		auto vertShaderCode = readFile("F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/vert.spv");
-		auto fragShaderCode = readFile("F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/frag.spv");
+	void createGraphicsPipeline()
+	{
+		/*auto vertShaderCode = readFile("F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/vert.spv");
+		auto fragShaderCode = readFile("F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/frag.spv");*/
+		auto vertShaderCode = readFile("E:/workarea/TheShen_github/TheShen/Sandbox/shaders/vert.spv");
+		auto fragShaderCode = readFile("E:/workarea/TheShen_github/TheShen/Sandbox/shaders/frag.spv");
 
 		VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
 		VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);

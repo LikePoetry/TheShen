@@ -664,3 +664,8 @@ void addPipeline(Renderer* pRenderer, const PipelineDesc* pDesc, Pipeline** ppPi
 
 }
 
+void addShader(Renderer* pRenderer, const ShaderDesc* pDesc, Shader** ppShader) 
+{
+
+}
+
