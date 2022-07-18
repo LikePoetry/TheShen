@@ -9,6 +9,8 @@ public:
 
 	virtual bool Load() = 0;
 
+	virtual void Draw() = 0;
+
 	virtual const char* GetName() = 0;
 
 	struct Settings

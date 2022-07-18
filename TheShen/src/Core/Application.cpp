@@ -58,6 +58,8 @@ void Application::Run() {
 		}
 
 		m_Window->OnUpdate();
+
+		pApp->Draw();
 	}
 
 }
