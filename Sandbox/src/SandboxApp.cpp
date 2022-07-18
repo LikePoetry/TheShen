@@ -11,6 +11,7 @@ SwapChain* pSwapChain = NULL;
 
 std::vector<Texture> pTextures;
 
+RenderPass* pRenderPass = NULL;
 
 class Sandbox :public App
 {
@@ -38,7 +39,10 @@ public:
 		queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
 		addQueue(pRenderer, &queueDesc, &pGraphicsQueue);
 
-
+		//添加渲染通道
+		RenderPassDesc renderPassDesc = {};
+		renderPassDesc.pColorFormats = pSwapChain->pDesc->mImageFormat;
+		addRenderPass(pRenderer, &renderPassDesc, &pRenderPass);
 
 		//Application::Get().PushLayer(new TestLayer());
 		return 0;

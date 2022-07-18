@@ -614,30 +614,6 @@ void addQueue(Renderer* pRenderer, QueueDesc* pDesc, Queue** ppQueue)
 	*ppQueue = &pQueue;
 }
 
-VkFormat findSupportedFormat(VkPhysicalDevice physicalDevice, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
-	for (VkFormat format : candidates) {
-		VkFormatProperties props;
-		vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
-
-		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-			return format;
-		}
-		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-			return format;
-		}
-	}
-
-	throw std::runtime_error("failed to find supported format!");
-}
-
-VkFormat findDepthFormat(VkPhysicalDevice physicalDevice) {
-	return findSupportedFormat(physicalDevice,
-		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-		VK_IMAGE_TILING_OPTIMAL,
-		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-	);
-}
-
 /// <summary>
 /// ÃÌº”‰÷»æÕ®µ¿
 /// </summary>
@@ -659,7 +635,7 @@ void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass*
 	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription depthAttachment{};
-	depthAttachment.format = findDepthFormat(pRenderer->pVkActiveGPU);
+	depthAttachment.format = pDesc->pColorFormats;
 	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -700,7 +676,8 @@ void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass*
 	renderPassInfo.dependencyCount = 1;
 	renderPassInfo.pDependencies = &dependency;
 
-	if (vkCreateRenderPass(pRenderer->pVkDevice, &renderPassInfo, nullptr, &pRenderPass.pRenderPass) != VK_SUCCESS) {
+	VkRenderPass renderpass = {};
+	if (vkCreateRenderPass(pRenderer->pVkDevice, &renderPassInfo, nullptr, &renderpass) != VK_SUCCESS) {
 		SHEN_CORE_ERROR("failed to create render pass!");
 		throw std::runtime_error("failed to create render pass!");
 	}

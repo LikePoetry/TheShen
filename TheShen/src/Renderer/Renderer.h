@@ -146,5 +146,5 @@ typedef struct RenderPass
 void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* p_desc, SwapChain** p_swap_chain, std::vector<Texture> pTextures);
 // 添加队列
 void addQueue(Renderer* pRenderer, QueueDesc* pQDesc, Queue** pQueue);
-
+//添加渲染通道
 void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass** ppRenderPass);
