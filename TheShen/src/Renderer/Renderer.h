@@ -207,10 +207,10 @@ typedef struct Pipeline
 /// <param name="appName"></param>
 /// <param name="pSettings"></param>
 /// <param name="ppRenderer"></param>
-void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* p_desc, SwapChain** p_swap_chain, std::vector<Texture> pTextures);
+void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* p_desc, SwapChain** p_swap_chain, std::vector<Texture>& pTextures);
 // 添加队列
 void addQueue(Renderer* pRenderer, QueueDesc* pQDesc, Queue** pQueue);
 ////添加渲染通道
-//void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass** ppRenderPass);
+void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass** ppRenderPass);
 //添加渲染管线
 void addPipeline(Renderer* pRenderer, const PipelineDesc* pDesc, Pipeline** ppPipeline);

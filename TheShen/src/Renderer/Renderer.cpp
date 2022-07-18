@@ -336,7 +336,7 @@ VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& 
 /// <param name="appName"></param>
 /// <param name="pSettings"></param>
 /// <param name="ppRenderer"></param>
-void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* pDesc, SwapChain** ppSwapChain, std::vector<Texture> pTextures)
+void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* pDesc, SwapChain** ppSwapChain, std::vector<Texture>& pTextures)
 {
 	//≥ı ºªØppRenderer
 	Renderer* pRenderer = (Renderer*)malloc(sizeof(Renderer));
@@ -611,8 +611,7 @@ void addQueue(Renderer* pRenderer, QueueDesc* pDesc, Queue** ppQueue)
 /// <param name="ppRenderPass"></param>
 void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass** ppRenderPass)
 {
-	RenderPass pRenderPass;
-	memset(&pRenderPass, 0, sizeof(pRenderPass));
+	RenderPass* pRenderPass = (RenderPass*)malloc(sizeof(RenderPass));
 	VkAttachmentDescription colorAttachment{};
 	colorAttachment.format = pDesc->pColorFormats;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -670,12 +669,14 @@ void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass*
 		SHEN_CORE_ERROR("failed to create render pass!");
 		throw std::runtime_error("failed to create render pass!");
 	}
-
-	*ppRenderPass = &pRenderPass;
+	pRenderPass->pRenderPass = renderpass;
+	*ppRenderPass = pRenderPass;
 }
 
 void addPipeline(Renderer* pRenderer, const PipelineDesc* pDesc, Pipeline** ppPipeline)
 {
+	//Pipeline* pPipeline = (Pipeline*)malloc(sizeof(Pipeline));
+
 
 }
 
