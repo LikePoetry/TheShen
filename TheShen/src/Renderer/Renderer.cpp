@@ -339,8 +339,7 @@ VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& 
 void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* pDesc, SwapChain** ppSwapChain, std::vector<Texture> pTextures)
 {
 	//初始化ppRenderer
-	Renderer pRenderer;
-	memset(&pRenderer, 0, sizeof(pRenderer));
+	Renderer* pRenderer = (Renderer*)malloc(sizeof(Renderer));
 	if (enableValidationLayers && !checkValidationLayerSupport())
 	{
 		SHEN_CORE_ERROR("validation layers requested, but not available!");
@@ -381,7 +380,7 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 			createInfo.pNext = nullptr;
 		}
 
-		if (vkCreateInstance(&createInfo, nullptr, &pRenderer.pVkInstance) != VK_SUCCESS) {
+		if (vkCreateInstance(&createInfo, nullptr, &pRenderer->pVkInstance) != VK_SUCCESS) {
 			SHEN_CORE_ERROR("failed to create instance!");
 			throw std::runtime_error("failed to create instance!");
 		}
@@ -393,18 +392,16 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		populateDebugMessengerCreateInfo(createInfo);
 
-		if (CreateDebugUtilsMessengerEXT(pRenderer.pVkInstance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+		if (CreateDebugUtilsMessengerEXT(pRenderer->pVkInstance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
 			SHEN_CORE_ERROR("failed to set up debug messenger!");
 			throw std::runtime_error("failed to set up debug messenger!");
 		}
 	}
 
 	//创建surface
-	SwapChain pSwapChain;
+	SwapChain* pSwapChain = (SwapChain*)malloc(sizeof(SwapChain));
 	{
-
-		memset(&pSwapChain, 0, sizeof(pSwapChain));
-		if (glfwCreateWindowSurface(pRenderer.pVkInstance, (GLFWwindow*)pDesc->mWindow, nullptr, &pSwapChain.pVkSurface) != VK_SUCCESS) {
+		if (glfwCreateWindowSurface(pRenderer->pVkInstance, (GLFWwindow*)pDesc->mWindow, nullptr, &pSwapChain->pVkSurface) != VK_SUCCESS) {
 			SHEN_CORE_ERROR("failed to create window surface!");
 			throw std::runtime_error("failed to create window surface!");
 		}
@@ -414,7 +411,7 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 	{
 		//获取设备的数量
 		uint32_t deviceCount = 0;
-		vkEnumeratePhysicalDevices(pRenderer.pVkInstance, &deviceCount, nullptr);
+		vkEnumeratePhysicalDevices(pRenderer->pVkInstance, &deviceCount, nullptr);
 
 		if (deviceCount == 0) {
 			SHEN_CORE_ERROR("failed to find GPUs with Vulkan support!");
@@ -423,13 +420,13 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 
 		//枚举所有的设备
 		std::vector<VkPhysicalDevice> devices(deviceCount);
-		vkEnumeratePhysicalDevices(pRenderer.pVkInstance, &deviceCount, devices.data());
+		vkEnumeratePhysicalDevices(pRenderer->pVkInstance, &deviceCount, devices.data());
 
 		//选取支持 图像，计算和演示功能的显卡
 		for (const auto& device : devices)
 		{
-			if (isDeviceSuitable(pRenderer, device, pSwapChain.pVkSurface)) {
-				pRenderer.pVkActiveGPU = device;
+			if (isDeviceSuitable(*pRenderer, device, pSwapChain->pVkSurface)) {
+				pRenderer->pVkActiveGPU = device;
 				break;
 			}
 		}
@@ -437,16 +434,16 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 
 	//创建逻辑设备
 	{
-		QueueFamilyIndices indices = findQueueFamilies(pRenderer.pVkActiveGPU, pSwapChain.pVkSurface);
+		QueueFamilyIndices indices = findQueueFamilies(pRenderer->pVkActiveGPU, pSwapChain->pVkSurface);
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 		std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
 		//图像队列索引
-		pRenderer.pVkGraphicsQueueFamilyIndex = indices.graphicsFamily.value();
+		pRenderer->pVkGraphicsQueueFamilyIndex = indices.graphicsFamily.value();
 
 		//演示队列索引
-		pSwapChain.mPresentQueueFamilyIndex = indices.presentFamily.value();
+		pSwapChain->mPresentQueueFamilyIndex = indices.presentFamily.value();
 
 		float queuePriority = 1.0f;
 		for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -480,14 +477,14 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 			createInfo.enabledLayerCount = 0;
 		}
 
-		if (vkCreateDevice(pRenderer.pVkActiveGPU, &createInfo, nullptr, &pRenderer.pVkDevice) != VK_SUCCESS) {
+		if (vkCreateDevice(pRenderer->pVkActiveGPU, &createInfo, nullptr, &pRenderer->pVkDevice) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create logical device!");
 		}
 	}
 
 	//创建交换链
 	{
-		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(pRenderer.pVkActiveGPU, pSwapChain.pVkSurface);
+		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(pRenderer->pVkActiveGPU, pSwapChain->pVkSurface);
 		VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
 		VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
 		VkExtent2D extent = chooseSwapExtent((GLFWwindow*)pDesc->mWindow, swapChainSupport.capabilities);
@@ -499,7 +496,7 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 
 		VkSwapchainCreateInfoKHR createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		createInfo.surface = pSwapChain.pVkSurface;
+		createInfo.surface = pSwapChain->pVkSurface;
 
 		createInfo.minImageCount = imageCount;
 		createInfo.imageFormat = surfaceFormat.format;
@@ -519,7 +516,7 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 			createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		}
 
-		QueueFamilyIndices indices = findQueueFamilies(pRenderer.pVkActiveGPU, pSwapChain.pVkSurface);
+		QueueFamilyIndices indices = findQueueFamilies(pRenderer->pVkActiveGPU, pSwapChain->pVkSurface);
 		uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
 		if (indices.graphicsFamily != indices.presentFamily) {
@@ -536,14 +533,14 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		createInfo.presentMode = presentMode;
 		createInfo.clipped = VK_TRUE;
 
-		if (vkCreateSwapchainKHR(pRenderer.pVkDevice, &createInfo, nullptr, &pSwapChain.pSwapChain) != VK_SUCCESS) {
+		if (vkCreateSwapchainKHR(pRenderer->pVkDevice, &createInfo, nullptr, &pSwapChain->pSwapChain) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create swap chain!");
 		}
 
 		std::vector<VkImage> swapChainImages;
-		vkGetSwapchainImagesKHR(pRenderer.pVkDevice, pSwapChain.pSwapChain, &imageCount, nullptr);
+		vkGetSwapchainImagesKHR(pRenderer->pVkDevice, pSwapChain->pSwapChain, &imageCount, nullptr);
 		swapChainImages.resize(imageCount);
-		vkGetSwapchainImagesKHR(pRenderer.pVkDevice, pSwapChain.pSwapChain, &imageCount, swapChainImages.data());
+		vkGetSwapchainImagesKHR(pRenderer->pVkDevice, pSwapChain->pSwapChain, &imageCount, swapChainImages.data());
 		//交换链其他信息存储
 		pTextures.resize(0);
 		for (uint32_t i = 0; i < swapChainImages.size(); i++) {
@@ -559,7 +556,7 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 			viewInfo.subresourceRange.layerCount = 1;
 
 			VkImageView imageView;
-			if (vkCreateImageView(pRenderer.pVkDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+			if (vkCreateImageView(pRenderer->pVkDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
 				throw std::runtime_error("failed to create texture image view!");
 			}
 			Texture pTexture;
@@ -573,18 +570,12 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		pDesc->mImageFormat = surfaceFormat.format;
 		pDesc->mExtend2D = extent;
 		pDesc->mImageCount = imageCount;
-
-
-		pSwapChain.pDesc = pDesc;
-
+		pSwapChain->pDesc = pDesc;
 		//创建演示队列
-		vkGetDeviceQueue(pRenderer.pVkDevice, pSwapChain.mPresentQueueFamilyIndex, 0, &pSwapChain.pPresentQueue);
+		vkGetDeviceQueue(pRenderer->pVkDevice, pSwapChain->mPresentQueueFamilyIndex, 0, &pSwapChain->pPresentQueue);
 	}
-
-
-
-	*ppRenderer = &pRenderer;
-	*ppSwapChain = &pSwapChain;
+	*ppRenderer = pRenderer;
+	*ppSwapChain = pSwapChain;
 }
 
 void uitil_find_queue_family_index(const Renderer* pRenderer, QueueType queueType, uint32_t* pOutFamilyIndex)
@@ -604,14 +595,12 @@ void uitil_find_queue_family_index(const Renderer* pRenderer, QueueType queueTyp
 /// <param name="pQueue"></param>
 void addQueue(Renderer* pRenderer, QueueDesc* pDesc, Queue** ppQueue)
 {
-	Queue pQueue;
-	memset(&pQueue, 0, sizeof(pQueue));
-
+	Queue* pQueue = (Queue*)malloc(sizeof(Queue));
 	uint32_t queueFamilyIndex = UINT32_MAX;
 	uitil_find_queue_family_index(pRenderer, pDesc->mType, &queueFamilyIndex);
 
-	vkGetDeviceQueue(pRenderer->pVkDevice, queueFamilyIndex, 0, &pQueue.pVkQueue);
-	*ppQueue = &pQueue;
+	vkGetDeviceQueue(pRenderer->pVkDevice, queueFamilyIndex, 0, &pQueue->pVkQueue);
+	*ppQueue = pQueue;
 }
 
 /// <summary>
@@ -683,5 +672,10 @@ void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass*
 	}
 
 	*ppRenderPass = &pRenderPass;
+}
+
+void addPipeline(Renderer* pRenderer, const PipelineDesc* pDesc, Pipeline** ppPipeline)
+{
+
 }
 

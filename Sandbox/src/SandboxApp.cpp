@@ -6,22 +6,42 @@
 
 Renderer* pRenderer = NULL;
 Queue* pGraphicsQueue = NULL;
-
 SwapChain* pSwapChain = NULL;
 
 std::vector<Texture> pTextures;
 
-RenderPass* pRenderPass = NULL;
-
 class Sandbox :public App
 {
 public:
+
+	/// <summary>
+	/// 读取文件
+	/// </summary>
+	/// <param name="filename"></param>
+	/// <returns></returns>
+	static std::vector<char> readFile(const std::string& filename) {
+		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+		if (!file.is_open()) {
+			throw std::runtime_error("failed to open file!");
+		}
+
+		size_t fileSize = (size_t)file.tellg();
+		std::vector<char> buffer(fileSize);
+
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+
+		file.close();
+
+		return buffer;
+	}
+
 	bool Init() override
 	{
 		//初始化Instance 到 LogicalDevice
 		RendererDesc settings;
 		memset(&settings, 0, sizeof(settings));
-
 		SwapChainDesc swapChainDesc = {};
 		swapChainDesc.mWindow = Application::Get().GetNativeWindow();
 		swapChainDesc.mHeight = mSettings.mHeight;
@@ -39,17 +59,37 @@ public:
 		queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
 		addQueue(pRenderer, &queueDesc, &pGraphicsQueue);
 
-		//添加渲染通道
-		RenderPassDesc renderPassDesc = {};
-		renderPassDesc.pColorFormats = pSwapChain->pDesc->mImageFormat;
-		addRenderPass(pRenderer, &renderPassDesc, &pRenderPass);
+
 
 		//Application::Get().PushLayer(new TestLayer());
 		return 0;
 	}
 
+
 	bool Load() override
 	{
+		{
+			GraphicsPipelineDesc graphicsPipelineDesc = {};
+
+			auto vertShaderCode = readFile("F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/vert.spv");
+			auto fragShaderCode = readFile("F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/frag.spv");
+
+			VkShaderModuleCreateInfo createInfo{};
+			createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			createInfo.codeSize = vertShaderCode.size();
+			createInfo.pCode = reinterpret_cast<const uint32_t*>(vertShaderCode.data());
+			VkShaderModule shaderModule;
+			if (vkCreateShaderModule(pRenderer->pVkDevice, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create shader module!");
+			}
+
+			Shader shader = {};
+			shader.pShaderModules = &shaderModule;
+
+			graphicsPipelineDesc.pShaders[0] = shader;
+		}
+
+
 		return true;
 	}
 
