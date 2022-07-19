@@ -318,3 +318,8 @@ void addSemaphore(Renderer* pRenderer, Semaphore** ppSemaphore);
 void addFence(Renderer* pRenderer, Fence** ppFence);
 
 
+/*********  绘制图形部分函数 ***********/
+/***************************************/
+void waitForFences(Renderer* pRenderer, int32_t fenceCount, Fence** ppFences);
+
+void acquireNextImage(Renderer* pRenderer, SwapChain* pSwapChain, Semaphore* pSignalSemaphore, Fence* pFence, uint32_t* pImageIndex);

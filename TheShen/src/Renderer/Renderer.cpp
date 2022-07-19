@@ -961,3 +961,61 @@ void addFence(Renderer* pRenderer, Fence** ppFence)
 	*ppFence = pFence;
 }
 
+/*********  绘制图形部分函数 ***********/
+/***************************************/
+
+/// <summary>
+/// 等待栅栏
+/// </summary>
+/// <param name="pRenderer"></param>
+/// <param name="fenceCount"></param>
+/// <param name="ppFences"></param>
+void waitForFences(Renderer* pRenderer, int32_t fenceCount, Fence** ppFences)
+{
+	VkFence* fences = (VkFence*)malloc(fenceCount * sizeof(VkFence));
+	uint32_t numValidFences = 0;
+	for (size_t i = 0; i < fenceCount; i++)
+	{
+		if (ppFences[i]->mSubmitted)
+		{
+			fences[i] = ppFences[i]->pVkFence;
+			numValidFences++;
+		}
+	}
+	if (numValidFences)
+	{
+		if (vkWaitForFences(pRenderer->pVkDevice, numValidFences, fences, VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+		{
+			SHEN_CORE_ERROR("failed to wait for fence!");
+		}
+		if (vkResetFences(pRenderer->pVkDevice, numValidFences, fences) != VK_SUCCESS)
+		{
+			SHEN_CORE_ERROR("failed to reset fence!");
+		}
+	}
+	for (uint32_t i = 0; i < fenceCount; ++i)
+		ppFences[i]->mSubmitted = false;
+}
+
+/// <summary>
+/// 获取下一帧图像
+/// </summary>
+/// <param name="pRenderer"></param>
+/// <param name="pSwapChain"></param>
+/// <param name="pSignalSemaphore"></param>
+/// <param name="pFence"></param>
+/// <param name="pImageIndex"></param>
+void acquireNextImage(Renderer* pRenderer, SwapChain* pSwapChain, Semaphore* pSignalSemaphore, Fence* pFence, uint32_t* pImageIndex)
+{
+	VkResult vk_res = {};
+	vk_res = vkAcquireNextImageKHR(pRenderer->pVkDevice, pSwapChain->pSwapChain, UINT64_MAX, VK_NULL_HANDLE, pFence->pVkFence, pImageIndex);
+	if (vk_res == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		*pImageIndex = -1;
+		vkResetFences(pRenderer->pVkDevice, 1, &pFence->pVkFence);
+		pFence->mSubmitted = false;
+		return;
+	}
+	pFence->mSubmitted = true;
+}
+

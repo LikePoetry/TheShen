@@ -214,14 +214,9 @@ public:
 
 	void Draw()
 	{
-		SHEN_CLIENT_INFO("Main loop");
-
-		vkWaitForFences(pRenderer->pVkDevice, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-
+		waitForFences(pRenderer, 1, &pInFlightFences[currentFrame]);
 		uint32_t imageIndex;
-		VkResult result = vkAcquireNextImageKHR(pRenderer->pVkDevice, pSwapChain->pSwapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-
-		vkResetFences(pRenderer->pVkDevice, 1, &inFlightFences[currentFrame]);
+		acquireNextImage(pRenderer, pSwapChain, pImageAvailableSemaphores[currentFrame], pInFlightFences[currentFrame], &imageIndex);
 
 		vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
 		recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
@@ -258,7 +253,7 @@ public:
 
 		presentInfo.pImageIndices = &imageIndex;
 
-		result = vkQueuePresentKHR(pSwapChain->pPresentQueue, &presentInfo);
+		VkResult result = vkQueuePresentKHR(pSwapChain->pPresentQueue, &presentInfo);
 
 
 		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
