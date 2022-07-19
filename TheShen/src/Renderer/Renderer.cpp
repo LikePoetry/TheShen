@@ -957,7 +957,7 @@ void addFence(Renderer* pRenderer, Fence** ppFence)
 		SHEN_CORE_ERROR("failed to create synchronization objects for a frame!");
 		throw std::runtime_error("failed to create synchronization objects for a frame!");
 	}
-	pFence->mSubmitted = 0;
+	pFence->mSubmitted = 1;
 	*ppFence = pFence;
 }
 
@@ -978,8 +978,8 @@ void waitForFences(Renderer* pRenderer, int32_t fenceCount, Fence** ppFences)
 	{
 		if (ppFences[i]->mSubmitted)
 		{
-			fences[i] = ppFences[i]->pVkFence;
-			numValidFences++;
+		fences[i] = ppFences[i]->pVkFence;
+		numValidFences++;
 		}
 	}
 	if (numValidFences)
@@ -1008,7 +1008,7 @@ void waitForFences(Renderer* pRenderer, int32_t fenceCount, Fence** ppFences)
 void acquireNextImage(Renderer* pRenderer, SwapChain* pSwapChain, Semaphore* pSignalSemaphore, Fence* pFence, uint32_t* pImageIndex)
 {
 	VkResult vk_res = {};
-	vk_res = vkAcquireNextImageKHR(pRenderer->pVkDevice, pSwapChain->pSwapChain, UINT64_MAX, VK_NULL_HANDLE, pFence->pVkFence, pImageIndex);
+	vk_res = vkAcquireNextImageKHR(pRenderer->pVkDevice, pSwapChain->pSwapChain, UINT64_MAX, pSignalSemaphore->pVkSemaphore, VK_NULL_HANDLE, pImageIndex);
 	if (vk_res == VK_ERROR_OUT_OF_DATE_KHR)
 	{
 		*pImageIndex = -1;

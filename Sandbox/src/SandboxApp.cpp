@@ -73,12 +73,13 @@ public:
 	{
 		ShaderDesc shaderDesc = {};
 		shaderDesc.mStages = SHADER_STAGE_VERT;
-		shaderDesc.pFileName = "F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/vert.spv";
+		//shaderDesc.pFileName = "F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/vert.spv";
+		shaderDesc.pFileName = "E:/workarea/TheShen_github/TheShen/Sandbox/shaders/vert.spv";
 		Shader* pVertShader;
 		addShader(pRenderer, &shaderDesc, &pVertShader);
-
 		shaderDesc.mStages = SHADER_STAGE_FRAG;
-		shaderDesc.pFileName = "F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/frag.spv";
+		//shaderDesc.pFileName = "F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/frag.spv";
+		shaderDesc.pFileName = "E:/workarea/TheShen_github/TheShen/Sandbox/shaders/frag.spv";
 		Shader* pFragShader;
 		addShader(pRenderer, &shaderDesc, &pFragShader);
 
@@ -214,10 +215,11 @@ public:
 
 	void Draw()
 	{
+		//SHEN_CLIENT_INFO("Main loop");
 		waitForFences(pRenderer, 1, &pInFlightFences[currentFrame]);
 		uint32_t imageIndex;
 		acquireNextImage(pRenderer, pSwapChain, pImageAvailableSemaphores[currentFrame], pInFlightFences[currentFrame], &imageIndex);
-
+	
 		vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
 		recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
@@ -253,7 +255,7 @@ public:
 
 		presentInfo.pImageIndices = &imageIndex;
 
-		VkResult result = vkQueuePresentKHR(pSwapChain->pPresentQueue, &presentInfo);
+		VkResult VkResultresult = vkQueuePresentKHR(pSwapChain->pPresentQueue, &presentInfo);
 
 
 		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
