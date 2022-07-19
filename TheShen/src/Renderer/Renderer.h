@@ -291,35 +291,41 @@ typedef struct Fence
 	uint32_t mSubmitted : 1;
 };
 
-/// <summary>
-/// 初始化绘图设备,包含交换链的创建
-/// </summary>
-/// <param name="appName"></param>
-/// <param name="pSettings"></param>
-/// <param name="ppRenderer"></param>
+// 初始化绘图设备,包含交换链的创建
 void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* p_desc, SwapChain** p_swap_chain, std::vector<Texture>& pTextures);
 // 添加队列
 void addQueue(Renderer* pRenderer, QueueDesc* pQDesc, Queue** pQueue);
-////添加渲染通道
+// 添加渲染通道
 void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass** ppRenderPass);
-//添加渲染管线
+// 添加渲染管线
 void addPipeline(Renderer* pRenderer, const PipelineDesc* pDesc, Pipeline** ppPipeline);
-//添加着色器
+// 添加着色器
 void addShader(Renderer* pRenderer, const ShaderDesc* pDesc, Shader** ppShader);
-//添加帧缓存
+// 添加帧缓存
 void addFrameBuffer(Renderer* pRenderer, const FrameBufferDesc* pDesc, FrameBuffer** ppFrameBuffer);
-//添加命令池
+// 添加命令池
 void addCmdPool(Renderer* pRenderer, const CmdPoolDesc* pDesc, CmdPool** ppCmdPool);
-//添加命令
+// 添加命令
 void addCmd(Renderer* pRenderer, const CmdDesc* pDesc, Cmd** ppCmd);
-//添加信号量
+// 添加信号量
 void addSemaphore(Renderer* pRenderer, Semaphore** ppSemaphore);
-//增加栅栏
+// 增加栅栏
 void addFence(Renderer* pRenderer, Fence** ppFence);
 
 
 /*********  绘制图形部分函数 ***********/
 /***************************************/
+// 等待栅栏
 void waitForFences(Renderer* pRenderer, int32_t fenceCount, Fence** ppFences);
-
+// 获取下一帧图片
 void acquireNextImage(Renderer* pRenderer, SwapChain* pSwapChain, Semaphore* pSignalSemaphore, Fence* pFence, uint32_t* pImageIndex);
+// 开启指令录制
+void beginCmd(Cmd* pCmd);
+// 指令绑定到管线
+void cmdBindPipeline(Cmd* pCmd, Pipeline* pPipeline);
+// 指令视口设置
+void cmdSetViewport(Cmd* pCmd, float x, float y, float width, float height, float minDepth, float maxDepth);
+//设置指令视口裁切
+void cmdSetScissor(Cmd* pCmd, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+// 指令绘制
+void cmdDraw(Cmd* pCmd, uint32_t vertex_count, uint32_t first_vertex);

@@ -167,13 +167,15 @@ public:
 		inFlightFences[1] = pInFlightFences[1]->pVkFence;
 	}
 
-	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	void Draw()
+	{
+		//SHEN_CLIENT_INFO("Main loop");
+		waitForFences(pRenderer, 1, &pInFlightFences[currentFrame]);
+		uint32_t imageIndex;
+		acquireNextImage(pRenderer, pSwapChain, pImageAvailableSemaphores[currentFrame], pInFlightFences[currentFrame], &imageIndex);
 
-		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-			throw std::runtime_error("failed to begin recording command buffer!");
-		}
+		//开始指令录制
+		beginCmd(pCmds[currentFrame]);
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -186,42 +188,26 @@ public:
 		renderPassInfo.clearValueCount = 1;
 		renderPassInfo.pClearValues = &clearColor;
 
-		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(pCmds[currentFrame]->pVkCmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+		//指令绑定到管线
+		cmdBindPipeline(pCmds[currentFrame], pPipeline);
+		// 设置指令视口尺寸
+		cmdSetViewport(pCmds[currentFrame], 0.0f, 0.0f,
+			(float)pSwapChain->pDesc->mWidth,
+			(float)pSwapChain->pDesc->mHeight, 0.0f, 1.0f);
+		//设置视口裁切
+		cmdSetScissor(pCmds[currentFrame], 0, 0, (float)pSwapChain->pDesc->mWidth,
+			(float)pSwapChain->pDesc->mHeight);
+		//指令绘制
+		cmdDraw(pCmds[currentFrame], 3, 0);
 
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = (float)pSwapChain->pDesc->mWidth;
-		viewport.height = (float)pSwapChain->pDesc->mHeight;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+		vkCmdEndRenderPass(pCmds[currentFrame]->pVkCmdBuf);
 
-		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
-		scissor.extent = pSwapChain->pDesc->mExtend2D;
-		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-
-		vkCmdEndRenderPass(commandBuffer);
-
-		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+		if (vkEndCommandBuffer(pCmds[currentFrame]->pVkCmdBuf) != VK_SUCCESS) {
 			throw std::runtime_error("failed to record command buffer!");
 		}
-	}
 
-	void Draw()
-	{
-		//SHEN_CLIENT_INFO("Main loop");
-		waitForFences(pRenderer, 1, &pInFlightFences[currentFrame]);
-		uint32_t imageIndex;
-		acquireNextImage(pRenderer, pSwapChain, pImageAvailableSemaphores[currentFrame], pInFlightFences[currentFrame], &imageIndex);
-	
-		vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
-		recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

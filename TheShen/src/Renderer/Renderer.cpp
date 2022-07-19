@@ -978,8 +978,8 @@ void waitForFences(Renderer* pRenderer, int32_t fenceCount, Fence** ppFences)
 	{
 		if (ppFences[i]->mSubmitted)
 		{
-		fences[i] = ppFences[i]->pVkFence;
-		numValidFences++;
+			fences[i] = ppFences[i]->pVkFence;
+			numValidFences++;
 		}
 	}
 	if (numValidFences)
@@ -1017,5 +1017,84 @@ void acquireNextImage(Renderer* pRenderer, SwapChain* pSwapChain, Semaphore* pSi
 		return;
 	}
 	pFence->mSubmitted = true;
+}
+
+/// <summary>
+/// 开始录制指令
+/// </summary>
+/// <param name="pCmd"></param>
+void beginCmd(Cmd* pCmd)
+{
+	VkCommandBufferBeginInfo begin_info{};
+	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	begin_info.pNext = NULL;
+	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	begin_info.pInheritanceInfo = NULL;
+
+	if (vkBeginCommandBuffer(pCmd->pVkCmdBuf, &begin_info) != VK_SUCCESS) {
+		SHEN_CORE_ERROR("failed to begin recording command buffer!");
+		throw std::runtime_error("failed to begin recording command buffer!");
+	}
+}
+
+/// <summary>
+/// 指令绑定到管线
+/// </summary>
+/// <param name="pCmd"></param>
+/// <param name="pPipeline"></param>
+void cmdBindPipeline(Cmd* pCmd, Pipeline* pPipeline)
+{
+	vkCmdBindPipeline(pCmd->pVkCmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pPipeline->pVkPipeline);
+}
+
+/// <summary>
+/// 指令视口设置
+/// </summary>
+/// <param name="pCmd"></param>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="width"></param>
+/// <param name="height"></param>
+/// <param name="minDepth"></param>
+/// <param name="maxDepth"></param>
+void cmdSetViewport(Cmd* pCmd, float x, float y, float width, float height, float minDepth, float maxDepth)
+{
+	VkViewport viewport{};
+	viewport.x = x;
+	viewport.y = y;
+	viewport.width = width;
+	viewport.height = height;
+	viewport.minDepth = minDepth;
+	viewport.maxDepth = maxDepth;
+	vkCmdSetViewport(pCmd->pVkCmdBuf, 0, 1, &viewport);
+}
+
+/// <summary>
+/// 设置指令视口裁切
+/// </summary>
+/// <param name="pCmd"></param>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name="width"></param>
+/// <param name="height"></param>
+void cmdSetScissor(Cmd* pCmd, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+{
+	VkRect2D scissor{};
+	scissor.offset.x=x;
+	scissor.offset.y = y;
+	scissor.extent.width = width;
+	scissor.extent.height = height;
+	vkCmdSetScissor(pCmd->pVkCmdBuf, 0, 1, &scissor);
+}
+
+/// <summary>
+/// 指令绘制
+/// </summary>
+/// <param name="pCmd"></param>
+/// <param name="vertex_count"></param>
+/// <param name="first_vertex"></param>
+void cmdDraw(Cmd* pCmd, uint32_t vertex_count, uint32_t first_vertex) 
+{
+	vkCmdDraw(pCmd->pVkCmdBuf, vertex_count, 1, first_vertex, 0);
 }
 
