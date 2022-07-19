@@ -478,6 +478,7 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		}
 
 		if (vkCreateDevice(pRenderer->pVkActiveGPU, &createInfo, nullptr, &pRenderer->pVkDevice) != VK_SUCCESS) {
+			SHEN_CORE_ERROR("failed to create logical device!");
 			throw std::runtime_error("failed to create logical device!");
 		}
 	}
@@ -534,6 +535,7 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 		createInfo.clipped = VK_TRUE;
 
 		if (vkCreateSwapchainKHR(pRenderer->pVkDevice, &createInfo, nullptr, &pSwapChain->pSwapChain) != VK_SUCCESS) {
+			SHEN_CORE_ERROR("failed to create swap chain!");
 			throw std::runtime_error("failed to create swap chain!");
 		}
 
@@ -557,6 +559,7 @@ void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer**
 
 			VkImageView imageView;
 			if (vkCreateImageView(pRenderer->pVkDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+				SHEN_CORE_ERROR("failed to create texture image view!");
 				throw std::runtime_error("failed to create texture image view!");
 			}
 			Texture pTexture;
@@ -598,7 +601,7 @@ void addQueue(Renderer* pRenderer, QueueDesc* pDesc, Queue** ppQueue)
 	Queue* pQueue = (Queue*)malloc(sizeof(Queue));
 	uint32_t queueFamilyIndex = UINT32_MAX;
 	uitil_find_queue_family_index(pRenderer, pDesc->mType, &queueFamilyIndex);
-
+	pQueue->mVkQueueIndex = queueFamilyIndex;
 	vkGetDeviceQueue(pRenderer->pVkDevice, queueFamilyIndex, 0, &pQueue->pVkQueue);
 	*ppQueue = pQueue;
 }
@@ -650,6 +653,7 @@ void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass*
 
 	VkRenderPass renderPass = {};
 	if (vkCreateRenderPass(pRenderer->pVkDevice, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+		SHEN_CORE_ERROR("failed to create render pass!");
 		throw std::runtime_error("failed to create render pass!");
 	}
 
@@ -657,15 +661,303 @@ void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass*
 	*ppRenderPass = pRenderPass;
 }
 
+void addGraphicsPipeline(Renderer* pRenderer, const PipelineDesc* pDesc, Pipeline** ppPipeline)
+{
+	Pipeline* pPipeline = (Pipeline*)malloc(sizeof(Pipeline));
+	pPipeline->mType = pDesc->mType;
+	int32_t shaderCount = pDesc->mGraphicsDesc.pShaderCount;
+	VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+	vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertShaderStageInfo.module = pDesc->mGraphicsDesc.pShaders[0]->pShaderModule;
+	vertShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+	fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragShaderStageInfo.module = pDesc->mGraphicsDesc.pShaders[1]->pShaderModule;
+	fragShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInputInfo.vertexBindingDescriptionCount = 0;
+	vertexInputInfo.vertexAttributeDescriptionCount = 0;
+
+	VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+	inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+	VkPipelineViewportStateCreateInfo viewportState{};
+	viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportState.viewportCount = 1;
+	viewportState.scissorCount = 1;
+
+	VkPipelineRasterizationStateCreateInfo rasterizer{};
+	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizer.depthClampEnable = VK_FALSE;
+	rasterizer.rasterizerDiscardEnable = VK_FALSE;
+	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterizer.lineWidth = 1.0f;
+	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterizer.depthBiasEnable = VK_FALSE;
+
+	VkPipelineMultisampleStateCreateInfo multisampling{};
+	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisampling.sampleShadingEnable = VK_FALSE;
+	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	colorBlendAttachment.blendEnable = VK_FALSE;
+
+	VkPipelineColorBlendStateCreateInfo colorBlending{};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY;
+	colorBlending.attachmentCount = 1;
+	colorBlending.pAttachments = &colorBlendAttachment;
+	colorBlending.blendConstants[0] = 0.0f;
+	colorBlending.blendConstants[1] = 0.0f;
+	colorBlending.blendConstants[2] = 0.0f;
+	colorBlending.blendConstants[3] = 0.0f;
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+	VkPipelineDynamicStateCreateInfo dynamicState{};
+	dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+	dynamicState.pDynamicStates = dynamicStates.data();
+
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 0;
+	pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+	if (vkCreatePipelineLayout(pRenderer->pVkDevice, &pipelineLayoutInfo, nullptr, &pPipeline->mVkPipelineLayout) != VK_SUCCESS) {
+		SHEN_CORE_ERROR("failed to create pipeline layout!");
+		throw std::runtime_error("failed to create pipeline layout!");
+	}
+
+
+
+	RenderPassDesc renderPassDesc = {};
+	renderPassDesc.pColorFormats = pDesc->mGraphicsDesc.pColorFormats;
+	RenderPass* pRenderPass;
+	addRenderPass(pRenderer, &renderPassDesc, &pRenderPass);
+	pPipeline->mRenderPass = *pRenderPass;
+
+	VkGraphicsPipelineCreateInfo pipelineInfo{};
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages;
+	pipelineInfo.pVertexInputState = &vertexInputInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	pipelineInfo.pViewportState = &viewportState;
+	pipelineInfo.pRasterizationState = &rasterizer;
+	pipelineInfo.pMultisampleState = &multisampling;
+	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = &dynamicState;
+	pipelineInfo.layout = pPipeline->mVkPipelineLayout;
+	pipelineInfo.renderPass = pRenderPass->pRenderPass;
+	pipelineInfo.subpass = 0;
+	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+	if (vkCreateGraphicsPipelines(pRenderer->pVkDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pPipeline->pVkPipeline) != VK_SUCCESS) {
+		SHEN_CORE_ERROR("failed to create graphics pipeline!");
+		throw std::runtime_error("failed to create graphics pipeline!");
+	}
+
+
+	vkDestroyShaderModule(pRenderer->pVkDevice, pDesc->mGraphicsDesc.pShaders[0]->pShaderModule, nullptr);
+	vkDestroyShaderModule(pRenderer->pVkDevice, pDesc->mGraphicsDesc.pShaders[1]->pShaderModule, nullptr);
+
+	*ppPipeline = pPipeline;
+}
+
 void addPipeline(Renderer* pRenderer, const PipelineDesc* pDesc, Pipeline** ppPipeline)
 {
-	//Pipeline* pPipeline = (Pipeline*)malloc(sizeof(Pipeline));
+	switch (pDesc->mType)
+	{
+	case PIPELINE_TYPE_GRAPHICS:
+	{
+		addGraphicsPipeline(pRenderer, pDesc, ppPipeline);
+		break;
+	}
+	default:
+		break;
+	}
 
 
 }
 
-void addShader(Renderer* pRenderer, const ShaderDesc* pDesc, Shader** ppShader) 
-{
+/// <summary>
+	/// ∂¡»°Œƒº˛
+	/// </summary>
+	/// <param name="filename"></param>
+	/// <returns></returns>
+static std::vector<char> readFile(const std::string& filename) {
+	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
+	if (!file.is_open()) {
+		SHEN_CORE_ERROR("failed to open file!");
+		throw std::runtime_error("failed to open file!");
+	}
+
+	size_t fileSize = (size_t)file.tellg();
+	std::vector<char> buffer(fileSize);
+
+	file.seekg(0);
+	file.read(buffer.data(), fileSize);
+
+	file.close();
+
+	return buffer;
+}
+
+void addShader(Renderer* pRenderer, const ShaderDesc* pDesc, Shader** ppShader)
+{
+	int32_t size = sizeof(Shader);
+	Shader* pShader = (Shader*)malloc(sizeof(Shader));
+	auto shaderCode = readFile(pDesc->pFileName);
+
+	VkShaderModuleCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = shaderCode.size();
+	createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
+	if (vkCreateShaderModule(pRenderer->pVkDevice, &createInfo, nullptr, &pShader->pShaderModule) != VK_SUCCESS) {
+		SHEN_CORE_ERROR("failed to create shader module!");
+		throw std::runtime_error("failed to create shader module!");
+	}
+
+	pShader->mStages = pDesc->mStages;
+	*ppShader = pShader;
+}
+
+/// <summary>
+/// ÃÌº”÷°ª∫¥Ê
+/// </summary>
+/// <param name="pRenderer"></param>
+/// <param name="pDesc"></param>
+/// <param name="ppFrameBuffer"></param>
+void addFrameBuffer(Renderer* pRenderer, const FrameBufferDesc* pDesc, FrameBuffer** ppFrameBuffer)
+{
+	FrameBuffer* pFrameBuffer = (FrameBuffer*)malloc(sizeof(FrameBuffer));
+
+	VkImageView attachments[] = {
+		pDesc->pTexture->pVkSRVDescriptor
+	};
+
+	VkFramebufferCreateInfo framebufferInfo{};
+	framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	framebufferInfo.renderPass = pDesc->pRenderPass->pRenderPass;
+	framebufferInfo.attachmentCount = 1;
+	framebufferInfo.pAttachments = attachments;
+	framebufferInfo.width = pDesc->mWidth;
+	framebufferInfo.height = pDesc->mHeight;
+	framebufferInfo.layers = 1;
+
+	if (vkCreateFramebuffer(pRenderer->pVkDevice, &framebufferInfo, nullptr, &pFrameBuffer->pFramebuffer) != VK_SUCCESS) {
+		SHEN_CORE_ERROR("failed to create framebuffer!");
+		throw std::runtime_error("failed to create framebuffer!");
+	}
+	pFrameBuffer->mHeight = pDesc->mHeight;
+	pFrameBuffer->mWidth = pDesc->mWidth;
+
+	*ppFrameBuffer = pFrameBuffer;
+}
+
+/// <summary>
+/// ÃÌº”√¸¡Óª∫≥Â≥ÿ
+/// </summary>
+/// <param name="pRenderer"></param>
+/// <param name="pDesc"></param>
+/// <param name="ppCmdPool"></param>
+void addCmdPool(Renderer* pRenderer, const CmdPoolDesc* pDesc, CmdPool** ppCmdPool)
+{
+	CmdPool* pCmdPool = (CmdPool*)malloc(sizeof(CmdPool));
+	VkCommandPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	poolInfo.queueFamilyIndex = pDesc->pQueue->mVkQueueIndex;
+	if (vkCreateCommandPool(pRenderer->pVkDevice, &poolInfo, nullptr, &pCmdPool->pVkCmdPool) != VK_SUCCESS) {
+		SHEN_CORE_ERROR("failed to create command pool!");
+		throw std::runtime_error("failed to create command pool!");
+	}
+	pCmdPool->pQueue = pDesc->pQueue;
+
+	*ppCmdPool = pCmdPool;
+}
+
+/// <summary>
+/// ÃÌº”√¸¡Ó
+/// </summary>
+/// <param name="pRenderer"></param>
+/// <param name="pDesc"></param>
+/// <param name="ppCmd"></param>
+void addCmd(Renderer* pRenderer, const CmdDesc* pDesc, Cmd** ppCmd)
+{
+	Cmd* pCmd = (Cmd*)malloc(sizeof(Cmd));
+
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = pDesc->pPool->pVkCmdPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = 1;
+
+	if (vkAllocateCommandBuffers(pRenderer->pVkDevice, &allocInfo, &(pCmd->pVkCmdBuf)) != VK_SUCCESS) {
+		SHEN_CORE_ERROR("failed to allocate command buffers!");
+		throw std::runtime_error("failed to allocate command buffers!");
+	}
+
+	*ppCmd = pCmd;
+}
+
+/// <summary>
+/// ÃÌº”–≈∫≈¡ø
+/// </summary>
+/// <param name="pRenderer"></param>
+/// <param name="ppSemaphore"></param>
+void addSemaphore(Renderer* pRenderer, Semaphore** ppSemaphore)
+{
+	Semaphore* pSemaphore = (Semaphore*)malloc(sizeof(Semaphore));
+	VkSemaphoreCreateInfo semaphoreInfo{};
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	semaphoreInfo.pNext = NULL;
+	semaphoreInfo.flags = 0;
+	if (vkCreateSemaphore(pRenderer->pVkDevice, &semaphoreInfo, nullptr, &pSemaphore->pVkSemaphore) != VK_SUCCESS)
+	{
+		SHEN_CORE_ERROR("failed to create synchronization objects for a frame!");
+		throw std::runtime_error("failed to create synchronization objects for a frame!");
+	}
+	pSemaphore->mSignaled = 0;
+	*ppSemaphore = pSemaphore;
+}
+
+/// <summary>
+/// ÃÌº”’§¿∏
+/// </summary>
+/// <param name="pRenderer"></param>
+/// <param name="ppFence"></param>
+void addFence(Renderer* pRenderer, Fence** ppFence)
+{
+	Fence* pFence = (Fence*)malloc(sizeof(Fence));
+
+	VkFenceCreateInfo fenceInfo{};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	fenceInfo.pNext = NULL;
+
+	if (vkCreateFence(pRenderer->pVkDevice, &fenceInfo, nullptr, &pFence->pVkFence) != VK_SUCCESS) {
+		SHEN_CORE_ERROR("failed to create synchronization objects for a frame!");
+		throw std::runtime_error("failed to create synchronization objects for a frame!");
+	}
+	pFence->mSubmitted = 0;
+	*ppFence = pFence;
 }
 

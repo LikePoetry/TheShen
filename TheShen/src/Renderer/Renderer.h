@@ -73,7 +73,8 @@ typedef struct QueueDesc
 /// </summary>
 typedef struct Queue
 {
-	VkQueue								pVkQueue;
+	VkQueue	pVkQueue;
+	uint32_t mVkQueueIndex : 5;
 } Queue;
 
 typedef struct Texture
@@ -181,7 +182,7 @@ typedef struct ShaderDesc
 
 typedef struct Shader
 {
-	VkShaderModule* pShaderModules;
+	VkShaderModule pShaderModule;
 	ShaderStage		mStages : 31;
 }Shader;
 
@@ -190,7 +191,9 @@ typedef struct Shader
 /// </summary>
 typedef struct GraphicsPipelineDesc
 {
-	Shader pShaders[SHADER_STAGE_COUNT];
+	Shader* pShaders[SHADER_STAGE_COUNT];
+	VkFormat pColorFormats;
+	int32_t	pShaderCount;
 } GraphicsPipelineDesc;
 
 /// <summary>
@@ -202,12 +205,92 @@ typedef struct PipelineDesc
 	PipelineType   mType;
 };
 
-
+/// <summary>
+/// 管线
+/// </summary>
 typedef struct Pipeline
 {
 	VkPipeline   pVkPipeline;
 	PipelineType mType;
+	RenderPass mRenderPass;
+	VkPipelineLayout mVkPipelineLayout;
 } Pipeline;
+
+/// <summary>
+/// 帧缓存描述
+/// </summary>
+typedef struct FrameBufferDesc
+{
+	RenderPass* pRenderPass;
+	Texture* pTexture;
+	uint32_t        mWidth : 16;
+	uint32_t        mHeight : 16;
+} FrameBufferDesc;
+
+/// <summary>
+/// 帧缓存
+/// </summary>
+typedef struct FrameBuffer
+{
+	VkFramebuffer pFramebuffer;
+	uint32_t      mWidth;
+	uint32_t      mHeight;
+} FrameBuffer;
+
+/// <summary>
+/// 命令池描述
+/// </summary>
+typedef struct CmdPoolDesc
+{
+	Queue* pQueue;
+	bool mTransient;
+} CmdPoolDesc;
+
+/// <summary>
+/// 命令池
+/// </summary>
+typedef struct CmdPool
+{
+	VkCommandPool pVkCmdPool;
+	Queue* pQueue;
+} CmdPool;
+
+typedef struct CmdDesc
+{
+	CmdPool* pPool;
+	bool mSecondary;
+} CmdDesc;
+
+/// <summary>
+/// 命令
+/// </summary>
+typedef struct Cmd
+{
+	VkCommandBuffer  pVkCmdBuf;
+	VkRenderPass     pVkActiveRenderPass;
+	VkPipelineLayout pBoundPipelineLayout;
+	CmdPool* pCmdPool;
+
+	Renderer* pRenderer;
+	Queue* pQueue;
+} Cmd;
+
+/// <summary>
+/// 信号量
+/// </summary>
+typedef struct Semaphore
+{
+	VkSemaphore pVkSemaphore;
+	uint32_t    mSignaled : 1;
+} Semaphore;
+
+
+typedef struct Fence
+{
+	VkFence  pVkFence;
+	uint32_t mSubmitted : 1;
+};
+
 /// <summary>
 /// 初始化绘图设备,包含交换链的创建
 /// </summary>
@@ -223,3 +306,15 @@ void addRenderPass(Renderer* pRenderer, const RenderPassDesc* pDesc, RenderPass*
 void addPipeline(Renderer* pRenderer, const PipelineDesc* pDesc, Pipeline** ppPipeline);
 //添加着色器
 void addShader(Renderer* pRenderer, const ShaderDesc* pDesc, Shader** ppShader);
+//添加帧缓存
+void addFrameBuffer(Renderer* pRenderer, const FrameBufferDesc* pDesc, FrameBuffer** ppFrameBuffer);
+//添加命令池
+void addCmdPool(Renderer* pRenderer, const CmdPoolDesc* pDesc, CmdPool** ppCmdPool);
+//添加命令
+void addCmd(Renderer* pRenderer, const CmdDesc* pDesc, Cmd** ppCmd);
+//添加信号量
+void addSemaphore(Renderer* pRenderer, Semaphore** ppSemaphore);
+//增加栅栏
+void addFence(Renderer* pRenderer, Fence** ppFence);
+
+
