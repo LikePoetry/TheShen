@@ -1,9 +1,6 @@
 #include "Renderer.h"
 #include "Core/Log.h"
 
-
-
-
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
 };
@@ -100,68 +97,6 @@ void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create
 	createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
-}
-
-/// <summary>
-/// 检查可用队列家族和它们的属性
-/// </summary>
-/// <param name="physical_device"></param>
-/// <param name="queue_families"></param>
-/// <returns></returns>
-bool CheckAvailableQueueFamiliesAndTheirProperties(VkPhysicalDevice                       physical_device,
-	std::vector<VkQueueFamilyProperties>& queue_families) {
-	//第一个阶段，获取指定物理设备上可用队列家族的总数。通过将最后一个参数设置为nullptr。调用vkGetPhysicalDeviceQueueFamilyProperties()
-	uint32_t queue_families_count = 0;
-
-	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, nullptr);
-	if (queue_families_count == 0) {
-		SHEN_CORE_ERROR("Could not get the number of queue families.");
-		return false;
-	}
-	//第二阶段，在获取指定物理设备含有的所有队列家族的数量后，就可以为队列家族的属性准备存储空间。
-	//再次调用vkGetPhysicalDeivceQueueFamilyProperties()函数，获取所有可用队列家族的属性
-	queue_families.resize(queue_families_count);
-	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_families_count, queue_families.data());
-	if (queue_families_count == 0) {
-		SHEN_CORE_ERROR("Could not acquire properties of queue families.");
-		return false;
-	}
-
-	return true;
-}
-
-/// <summary>
-///  根据功能选择队列家族的索引
-/// </summary>
-/// <param name="physical_device"></param>
-/// <param name="desired_capabilities"></param>
-/// <param name="queue_family_index"></param>
-/// <returns></returns>
-bool SelectIndexOfQueueFamilyWithDesiredCapabilities(VkPhysicalDevice   physical_device,
-	VkQueueFlags       desired_capabilities,
-	uint32_t& queue_family_index) {
-	//先获取指定物理设备上可用队列家族的属性，将通过执行检查操作获得的数据存储在queue_families变量中，
-	//queue_families变量中存储的是元素类型为VkQueueFamilyProperties的std::vector 容器
-	std::vector<VkQueueFamilyProperties> queue_families;
-	if (!CheckAvailableQueueFamiliesAndTheirProperties(physical_device, queue_families)) {
-		return false;
-	}
-
-	//然后检查vector容器queue_families 变量中的所有元素
-	//queue_families 变量中的每个元素，都代表一个独立的队列家族。每个元素中的queueCount成员都含有该元素代表的队列家族中可用队列的数量。
-	//queueFlages成员使用位域数据结构，在该数据结构中每个二进制位代表一种操作类型，对指定的位进行设置，则代表其对应类型的操作由指定的队列家族来支持。
-	//我们可以尝试组合使用队列家族支持的任何操作，但是需要为每种类型的操作寻找独立的队列，这完全取决于硬件支持和Vulkan驱动程序。
-	//为了确保我们获得了正确的数据，还应该检查每个家族是否至少含有一个队列。
-	//在更高级的现实处理情况下，需要存储每个家族含有队列的总数，这是因为我们可以使用一个以上的队列，但无法使用超过指定家族中可用队列数量的队列。
-	//在简单的情况下，使用指定家族中的一个队列就足够了。
-	for (uint32_t index = 0; index < static_cast<uint32_t>(queue_families.size()); ++index) {
-		if ((queue_families[index].queueCount > 0) &&
-			((queue_families[index].queueFlags & desired_capabilities) == desired_capabilities)) {
-			queue_family_index = index;
-			return true;
-		}
-	}
-	return false;
 }
 
 struct QueueFamilyIndices {

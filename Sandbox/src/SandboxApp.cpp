@@ -2,6 +2,7 @@
 #include "Core/App.h"
 #include "TestLayer.h"
 #include "Renderer/Renderer.h"
+#include "ImGui/UI.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -89,6 +90,13 @@ public:
 		createCommandPool();
 		createCommandBuffers();
 		createSyncObjects();
+
+		//初始化UI 接口
+		UserInterfaceDesc uiRenderDesc = {};
+		uiRenderDesc.pGraphicsQueue = pGraphicsQueue;
+		uiRenderDesc.pSwapChain = pSwapChain;
+		uiRenderDesc.pRenderer = pRenderer;
+		initUserInterface(&uiRenderDesc);
 		return true;
 	}
 
