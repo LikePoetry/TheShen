@@ -56,13 +56,13 @@ public:
 	{
 		ShaderDesc shaderDesc = {};
 		shaderDesc.mStages = SHADER_STAGE_VERT;
-		shaderDesc.pFileName = "F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/vert.spv";
-		//shaderDesc.pFileName = "E:/workarea/TheShen_github/TheShen/Sandbox/shaders/vert.spv";
+		//shaderDesc.pFileName = "F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/vert.spv";
+		shaderDesc.pFileName = "E:/workarea/TheShen_github/TheShen/Sandbox/shaders/vert.spv";
 		Shader* pVertShader;
 		addShader(pRenderer, &shaderDesc, &pVertShader);
 		shaderDesc.mStages = SHADER_STAGE_FRAG;
-		shaderDesc.pFileName = "F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/frag.spv";
-		//shaderDesc.pFileName = "E:/workarea/TheShen_github/TheShen/Sandbox/shaders/frag.spv";
+		//shaderDesc.pFileName = "F:/VulkanWorkarea/TheShenProject_github/TheShen/bin/Debug-windows-x86_64/Sandbox/shaders/frag.spv";
+		shaderDesc.pFileName = "E:/workarea/TheShen_github/TheShen/Sandbox/shaders/frag.spv";
 		Shader* pFragShader;
 		addShader(pRenderer, &shaderDesc, &pFragShader);
 
@@ -97,6 +97,7 @@ public:
 		uiRenderDesc.pSwapChain = pSwapChain;
 		uiRenderDesc.pRenderer = pRenderer;
 		initUserInterface(&uiRenderDesc);
+		createImGuiCommandBuffers(pTextures);
 		return true;
 	}
 
@@ -146,28 +147,34 @@ public:
 		uint32_t imageIndex;
 		acquireNextImage(pRenderer, pSwapChain, pImageAvailableSemaphores[currentFrame], pInFlightFences[currentFrame], &imageIndex);
 		//开始指令录制
-		beginCmd(pCmds[currentFrame]);
+		Cmd* cmd = pCmds[currentFrame];
+
+		beginCmd(cmd);
 		//绑定到渲染子通道
-		cmdBindRenderPass(pCmds[currentFrame], pRenderPass, pFrameBuffers[imageIndex]);
+		cmdBindRenderPass(cmd, pRenderPass, pFrameBuffers[imageIndex]);
 		//指令绑定到管线
-		cmdBindPipeline(pCmds[currentFrame], pPipeline);
+		cmdBindPipeline(cmd, pPipeline);
 		// 设置指令视口尺寸
-		cmdSetViewport(pCmds[currentFrame], 0.0f, 0.0f,
+		cmdSetViewport(cmd, 0.0f, 0.0f,
 			(float)pSwapChain->pDesc->mWidth,
 			(float)pSwapChain->pDesc->mHeight, 0.0f, 1.0f);
 		//设置视口裁切
-		cmdSetScissor(pCmds[currentFrame], 0, 0, (float)pSwapChain->pDesc->mWidth,
+		cmdSetScissor(cmd, 0, 0, (float)pSwapChain->pDesc->mWidth,
 			(float)pSwapChain->pDesc->mHeight);
 		//指令绘制
-		cmdDraw(pCmds[currentFrame], 3, 0);
+		cmdDraw(cmd, 3, 0);
+
+		//绘制UI
+		cmdDrawUserInterface(cmd,imageIndex,currentFrame, pInFlightFences[currentFrame]->pVkFence);
 		// 结束绘制
-		endCmd(pCmds[currentFrame]);
+		endCmd(cmd);
 		//图像队列提交
+
 		QueueSubmitDesc submitDesc = {};
 		submitDesc.mCmdCount = 1;
 		submitDesc.mSignalSemaphoreCount = 1;
 		submitDesc.mWaitSemaphoreCount = 1;
-		submitDesc.ppCmds = &pCmds[currentFrame];
+		submitDesc.ppCmds = &cmd;
 		submitDesc.ppSignalSemaphores = &pRenderFinishedSemaphores[currentFrame];
 		submitDesc.ppWaitSemaphores = &pImageAvailableSemaphores[currentFrame];
 		submitDesc.pSignalFence = pInFlightFences[currentFrame];

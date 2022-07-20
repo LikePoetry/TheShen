@@ -17,6 +17,8 @@ static UserInterface* pUserInterface = NULL;
 VkDescriptorPool m_ImGuiDescriptorPool;
 VkCommandPool m_ImGuiCommandPool;
 VkRenderPass m_ImGuiRenderPass;
+std::vector<VkCommandBuffer> m_ImGuiCommandBuffers;
+std::vector<VkFramebuffer> m_ImGuiFramebuffers;
 
 
 void createImGuiDescriptorPool()
@@ -179,6 +181,125 @@ void initUserInterface(UserInterfaceDesc* pDesc)
 		endSingleTimeCommands(commandBuffer, m_ImGuiCommandPool);
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 	}
+}
+
+
+void createImGuiCommandBuffers(std::vector<Texture> pTextures)
+{
+
+	std::vector<VkImageView> swapChainImageViews;
+	swapChainImageViews.resize(pTextures.size());
+	for (size_t i = 0; i < pTextures.size(); i++)
+	{
+		swapChainImageViews[i] = pTextures[i].pVkSRVDescriptor;
+	}
+
+	m_ImGuiCommandBuffers.resize(swapChainImageViews.size());
+
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = m_ImGuiCommandPool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = (uint32_t)m_ImGuiCommandBuffers.size();
+
+	if (vkAllocateCommandBuffers(pUserInterface->pRenderer->pVkDevice, &allocInfo, m_ImGuiCommandBuffers.data()) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to allocate command buffers!");
+	}
+
+	m_ImGuiFramebuffers.resize(swapChainImageViews.size());
+
+	VkImageView attachment[1];
+	VkFramebufferCreateInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	info.renderPass = m_ImGuiRenderPass;
+	info.attachmentCount = 1;
+	info.pAttachments = attachment;
+	info.width = pUserInterface->pSwapChain->pDesc->mWidth;
+	info.height = pUserInterface->pSwapChain->pDesc->mHeight;
+	info.layers = 1;
+	for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
+	{
+		attachment[0] = swapChainImageViews[i];
+		if (vkCreateFramebuffer(pUserInterface->pRenderer->pVkDevice, &info, nullptr, &m_ImGuiFramebuffers[i]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+	}
+}
+
+/// <summary>
+/// 用户接口绘制
+/// </summary>
+/// <param name="pCmd"></param>
+void cmdDrawUserInterface(void* /* Cmd* */ pCmd, uint32_t imageIndex, uint32_t currentFrame, VkFence fence)
+{
+	Cmd* cmd = (Cmd*)pCmd;
+
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+
+	ImGui::NewFrame();
+
+	static bool show_demo_window = true;
+	ImGui::ShowDemoWindow(&show_demo_window);
+
+	ImGui::Begin("Viewport");
+
+	ImGui::Text("Test");
+
+	ImGui::End();
+
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::Render();
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+	}
+
+	// vkResetCommandPool(m_Device, m_ImGuiCommandPool, 0);
+	VkCommandBufferBeginInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	vkBeginCommandBuffer(m_ImGuiCommandBuffers[currentFrame], &info);
+
+	VkRenderPassBeginInfo renderPassInfo = {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = m_ImGuiRenderPass;
+	renderPassInfo.framebuffer = m_ImGuiFramebuffers[imageIndex];
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent = pUserInterface->pSwapChain->pDesc->mExtend2D;
+	VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+	renderPassInfo.clearValueCount = 1;
+	renderPassInfo.pClearValues = &clearColor;
+	vkCmdBeginRenderPass(m_ImGuiCommandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	// Record dear imgui primitives into command buffer
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_ImGuiCommandBuffers[currentFrame]);
+
+
+
+	vkCmdEndRenderPass(m_ImGuiCommandBuffers[currentFrame]);
+	vkEndCommandBuffer(m_ImGuiCommandBuffers[currentFrame]);
+
+	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 0;
+	submitInfo.pWaitSemaphores = NULL;
+	submitInfo.pWaitDstStageMask = &wait_stage;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &m_ImGuiCommandBuffers[currentFrame];
+	submitInfo.signalSemaphoreCount = 0;
+	submitInfo.pSignalSemaphores = NULL;
+
+	VkResult result = vkQueueSubmit(pUserInterface->pGraphicsQueue->pVkQueue, 1, &submitInfo, nullptr);
+
+
+
+	//cmd->pVkCmdBuf = m_ImGuiCommandBuffers[currentFrame];
+	//cmd->pVkActiveRenderPass = m_ImGuiRenderPass;
 }
 
 bool platformInitUserInterface()
