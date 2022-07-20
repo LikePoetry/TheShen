@@ -1037,6 +1037,25 @@ void beginCmd(Cmd* pCmd)
 	}
 }
 
+// 指令绑定到渲染子通道
+void cmdBindRenderPass(Cmd* pCmd, RenderPass* pRenderPass, FrameBuffer* pFrameBuffer)
+{
+	VkRenderPassBeginInfo renderPassInfo{};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = pRenderPass->pRenderPass;
+	renderPassInfo.framebuffer = pFrameBuffer->pFramebuffer;
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent.height = pFrameBuffer->mHeight;
+	renderPassInfo.renderArea.extent.width = pFrameBuffer->mWidth;
+
+	VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+	renderPassInfo.clearValueCount = 1;
+	renderPassInfo.pClearValues = &clearColor;
+	vkCmdBeginRenderPass(pCmd->pVkCmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	pCmd->pVkActiveRenderPass = pRenderPass->pRenderPass;
+}
+
 /// <summary>
 /// 指令绑定到管线
 /// </summary>
@@ -1080,7 +1099,7 @@ void cmdSetViewport(Cmd* pCmd, float x, float y, float width, float height, floa
 void cmdSetScissor(Cmd* pCmd, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
 {
 	VkRect2D scissor{};
-	scissor.offset.x=x;
+	scissor.offset.x = x;
 	scissor.offset.y = y;
 	scissor.extent.width = width;
 	scissor.extent.height = height;
@@ -1093,8 +1112,143 @@ void cmdSetScissor(Cmd* pCmd, uint32_t x, uint32_t y, uint32_t width, uint32_t h
 /// <param name="pCmd"></param>
 /// <param name="vertex_count"></param>
 /// <param name="first_vertex"></param>
-void cmdDraw(Cmd* pCmd, uint32_t vertex_count, uint32_t first_vertex) 
+void cmdDraw(Cmd* pCmd, uint32_t vertex_count, uint32_t first_vertex)
 {
 	vkCmdDraw(pCmd->pVkCmdBuf, vertex_count, 1, first_vertex, 0);
+}
+
+/// <summary>
+/// 结束指令绘制
+/// </summary>
+/// <param name="pCmd"></param>
+void endCmd(Cmd* pCmd)
+{
+	if (pCmd->pVkActiveRenderPass)
+	{
+		vkCmdEndRenderPass(pCmd->pVkCmdBuf);
+	}
+
+	pCmd->pVkActiveRenderPass = VK_NULL_HANDLE;
+
+	if (vkEndCommandBuffer(pCmd->pVkCmdBuf) != VK_SUCCESS)
+	{
+		SHEN_CORE_ERROR("failed to record command buffer!");
+		throw std::runtime_error("failed to record command buffer!");
+	}
+}
+
+/// <summary>
+/// 队列提交
+/// </summary>
+/// <param name="pQueue"></param>
+/// <param name="pDesc"></param>
+void queueSubmit(Queue* pQueue, const QueueSubmitDesc* pDesc)
+{
+	uint32_t    cmdCount = pDesc->mCmdCount;
+	Cmd** ppCmds = pDesc->ppCmds;
+	Fence* pFence = pDesc->pSignalFence;
+	uint32_t    waitSemaphoreCount = pDesc->mWaitSemaphoreCount;
+	Semaphore** ppWaitSemaphores = pDesc->ppWaitSemaphores;
+	uint32_t    signalSemaphoreCount = pDesc->mSignalSemaphoreCount;
+	Semaphore** ppSignalSemaphores = pDesc->ppSignalSemaphores;
+
+	VkCommandBuffer* cmds = (VkCommandBuffer*)malloc(cmdCount * sizeof(VkCommandBuffer));
+	for (uint32_t i = 0; i < cmdCount; ++i)
+	{
+		cmds[i] = ppCmds[i]->pVkCmdBuf;
+	}
+
+	VkSemaphore* wait_semaphores = waitSemaphoreCount ? (VkSemaphore*)malloc(waitSemaphoreCount * sizeof(VkSemaphore)) : NULL;
+	VkPipelineStageFlags* wait_masks = (VkPipelineStageFlags*)malloc(waitSemaphoreCount * sizeof(VkPipelineStageFlags));
+	uint32_t              waitCount = 0;
+	for (uint32_t i = 0; i < waitSemaphoreCount; ++i)
+	{
+		//TODO
+		//if (ppWaitSemaphores[i]->mSignaled)
+		//{
+		wait_semaphores[waitCount] = ppWaitSemaphores[i]->pVkSemaphore;    //-V522
+		wait_masks[waitCount] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		++waitCount;
+
+		ppWaitSemaphores[i]->mSignaled = false;
+		//}
+	}
+
+	VkSemaphore* signal_semaphores = signalSemaphoreCount ? (VkSemaphore*)malloc(signalSemaphoreCount * sizeof(VkSemaphore)) : NULL;
+	uint32_t     signalCount = 0;
+	for (uint32_t i = 0; i < signalSemaphoreCount; ++i)
+	{
+		//TODO
+		//if (!ppSignalSemaphores[i]->mSignaled)
+		//{
+		signal_semaphores[signalCount] = ppSignalSemaphores[i]->pVkSemaphore;    //-V522
+		//ppSignalSemaphores[i]->mCurrentNodeIndex = pQueue->mNodeIndex;
+		ppSignalSemaphores[i]->mSignaled = true;
+		++signalCount;
+		//}
+	}
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	submitInfo.waitSemaphoreCount = waitCount;
+	submitInfo.pWaitSemaphores = wait_semaphores;
+	submitInfo.pWaitDstStageMask = wait_masks;
+
+	submitInfo.commandBufferCount = cmdCount;
+	submitInfo.pCommandBuffers = cmds;
+
+	submitInfo.signalSemaphoreCount = signalCount;
+	submitInfo.pSignalSemaphores = signal_semaphores;
+
+	if (vkQueueSubmit(pQueue->pVkQueue, 1, &submitInfo, pFence ? pFence->pVkFence : VK_NULL_HANDLE) != VK_SUCCESS)
+	{
+		SHEN_CORE_ERROR("failed to submit draw command buffer!");
+		throw std::runtime_error("failed to submit draw command buffer!");
+	}
+}
+
+/// <summary>
+/// 图形演示
+/// </summary>
+/// <param name="pQueue"></param>
+/// <param name="pDesc"></param>
+void queuePresent(Queue* pQueue, const QueuePresentDesc* pDesc)
+{
+	uint32_t    waitSemaphoreCount = pDesc->mWaitSemaphoreCount;
+	Semaphore** ppWaitSemaphores = pDesc->ppWaitSemaphores;
+
+	SwapChain* pSwapChain = pDesc->pSwapChain;
+
+	VkSemaphore* wait_semaphores = waitSemaphoreCount ? (VkSemaphore*)alloca(waitSemaphoreCount * sizeof(VkSemaphore)) : NULL;
+	uint32_t     waitCount = 0;
+	for (uint32_t i = 0; i < waitSemaphoreCount; ++i)
+	{
+		//TODO
+		/*if (ppWaitSemaphores[i]->mSignaled)
+		{*/
+		wait_semaphores[waitCount] = ppWaitSemaphores[i]->pVkSemaphore;    //-V522
+		ppWaitSemaphores[i]->mSignaled = false;
+		++waitCount;
+		//}
+	}
+
+	uint32_t presentIndex = pDesc->mIndex;
+
+	VkPresentInfoKHR present_info{};
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.pNext = NULL;
+	present_info.waitSemaphoreCount = waitCount;
+	present_info.pWaitSemaphores = wait_semaphores;
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = &(pSwapChain->pSwapChain);
+	present_info.pImageIndices = &(presentIndex);
+	present_info.pResults = NULL;
+
+	if (vkQueuePresentKHR(pSwapChain->pPresentQueue ? pSwapChain->pPresentQueue : pQueue->pVkQueue, &present_info) != VK_SUCCESS)
+	{
+		SHEN_CORE_ERROR("failed to present!");
+		throw std::runtime_error("failed to present!");
+	}
 }
 

@@ -284,12 +284,41 @@ typedef struct Semaphore
 	uint32_t    mSignaled : 1;
 } Semaphore;
 
-
+/// <summary>
+/// 栅栏
+/// </summary>
 typedef struct Fence
 {
 	VkFence  pVkFence;
 	uint32_t mSubmitted : 1;
-};
+} Fence;
+
+/// <summary>
+/// 队列提交信息描述
+/// </summary>
+typedef struct QueueSubmitDesc
+{
+	Cmd**		ppCmds;
+	Fence*		pSignalFence;
+	Semaphore** ppWaitSemaphores;
+	Semaphore** ppSignalSemaphores;
+	uint32_t    mCmdCount;
+	uint32_t    mWaitSemaphoreCount;
+	uint32_t    mSignalSemaphoreCount;
+	bool        mSubmitDone;
+} QueueSubmitDesc;
+
+/// <summary>
+/// 演示队列信息描述
+/// </summary>
+typedef struct QueuePresentDesc
+{
+	SwapChain* pSwapChain;
+	Semaphore** ppWaitSemaphores;
+	uint32_t    mWaitSemaphoreCount;
+	uint8_t     mIndex;
+	bool        mSubmitDone;
+} QueuePresentDesc;
 
 // 初始化绘图设备,包含交换链的创建
 void initRenderer(const char* appName, const RendererDesc* pSettings, Renderer** ppRenderer, SwapChainDesc* p_desc, SwapChain** p_swap_chain, std::vector<Texture>& pTextures);
@@ -321,6 +350,8 @@ void waitForFences(Renderer* pRenderer, int32_t fenceCount, Fence** ppFences);
 void acquireNextImage(Renderer* pRenderer, SwapChain* pSwapChain, Semaphore* pSignalSemaphore, Fence* pFence, uint32_t* pImageIndex);
 // 开启指令录制
 void beginCmd(Cmd* pCmd);
+// 指令绑定到子渲染通道
+void cmdBindRenderPass(Cmd* pCmd, RenderPass* pRenderPass, FrameBuffer* pFrameBuffer);
 // 指令绑定到管线
 void cmdBindPipeline(Cmd* pCmd, Pipeline* pPipeline);
 // 指令视口设置
@@ -329,3 +360,9 @@ void cmdSetViewport(Cmd* pCmd, float x, float y, float width, float height, floa
 void cmdSetScissor(Cmd* pCmd, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 // 指令绘制
 void cmdDraw(Cmd* pCmd, uint32_t vertex_count, uint32_t first_vertex);
+// 结束指令录制
+void endCmd(Cmd* pCmd);
+// 队列提交
+void queueSubmit(Queue* pQueue, const QueueSubmitDesc* pDesc);
+// 队列演示
+void queuePresent(Queue* pQueue, const QueuePresentDesc* pDesc);
