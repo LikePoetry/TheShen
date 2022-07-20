@@ -115,6 +115,7 @@
     <ClInclude Include="src\ImGui\ImGuiLayer.h" />
     <ClInclude Include="src\ImGui\example\imgui_impl_glfw.h" />
     <ClInclude Include="src\ImGui\example\imgui_impl_vulkan.h" />
+    <ClInclude Include="src\ImGui\UI.h" />
     <ClInclude Include="src\Windows\WindowsWindow.h" />
     <ClInclude Include="src\Renderer\Renderer.h" />
     <ClInclude Include="src\TheShen.h" />
@@ -127,6 +128,7 @@
     <ClCompile Include="src\ImGui\ImGuiLayer.cpp" />
     <ClCompile Include="src\ImGui\example\imgui_impl_glfw.cpp" />
     <ClCompile Include="src\ImGui\example\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="src\ImGui\UI.cpp" />
     <ClCompile Include="src\Windows\WindowsWindow.cpp" />
     <ClCompile Include="src\Renderer\Renderer.cpp" />
   </ItemGroup>

@@ -33,6 +33,8 @@ public:
 
 	static Application& Get() { return *s_Instance; }
 
+	bool InitBaseSubSystems();
+
 	void Run();
 private:
 

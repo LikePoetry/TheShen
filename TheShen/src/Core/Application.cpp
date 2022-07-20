@@ -2,7 +2,9 @@
 #include "Renderer/Renderer.h"
 
 static App* pApp = nullptr;
+
 Application* Application::s_Instance = nullptr;
+
 Application::Application(int argc, char** argv, App* app) {
 	SHEN_CORE_ASSERT(!s_Instance, "Application already exists!");
 	s_Instance = this;
@@ -19,8 +21,10 @@ Application::Application(int argc, char** argv, App* app) {
 
 	m_Window->SetEventCallback(SHEN_BIND_EVENT_FN(OnEvent));
 
-	pApp = app;
+	// 初始化子系统
+	InitBaseSubSystems();
 
+	pApp = app;
 	app->Init();
 
 	app->Load();
@@ -29,9 +33,25 @@ Application::Application(int argc, char** argv, App* app) {
 	PushOverlay(m_ImGuiLayer);
 }
 
-Application::~Application() {
+Application::~Application() 
+{
 
 }
+
+/// <summary>
+/// 初始化子系统
+/// </summary>
+/// <returns></returns>
+bool Application::InitBaseSubSystems()
+{
+	extern bool platformInitUserInterface();
+	if (!platformInitUserInterface())
+	{
+		return false;
+	}
+}
+
+
 
 void Application::Run() {
 	while (m_Running)

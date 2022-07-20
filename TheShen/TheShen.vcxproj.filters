@@ -99,6 +99,7 @@
     <ClInclude Include="src\TheShen.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\ImGui\UI.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp">
@@ -128,5 +129,6 @@
     <ClCompile Include="src\Renderer\Renderer.cpp">
       <Filter>src\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="src\ImGui\UI.cpp" />
   </ItemGroup>
 </Project>
