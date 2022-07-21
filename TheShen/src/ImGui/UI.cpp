@@ -262,7 +262,7 @@ void cmdDrawUserInterface(void* /* Cmd* */ pCmd, uint32_t imageIndex, uint32_t c
 	VkCommandBufferBeginInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	vkBeginCommandBuffer(m_ImGuiCommandBuffers[currentFrame], &info);
+	vkBeginCommandBuffer(cmd->pVkCmdBuf, &info);
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -273,32 +273,12 @@ void cmdDrawUserInterface(void* /* Cmd* */ pCmd, uint32_t imageIndex, uint32_t c
 	VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	renderPassInfo.clearValueCount = 1;
 	renderPassInfo.pClearValues = &clearColor;
-	vkCmdBeginRenderPass(m_ImGuiCommandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
+	vkCmdBeginRenderPass(cmd->pVkCmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 	// Record dear imgui primitives into command buffer
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_ImGuiCommandBuffers[currentFrame]);
-
-
-
-	vkCmdEndRenderPass(m_ImGuiCommandBuffers[currentFrame]);
-	vkEndCommandBuffer(m_ImGuiCommandBuffers[currentFrame]);
-
-	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.waitSemaphoreCount = 0;
-	submitInfo.pWaitSemaphores = NULL;
-	submitInfo.pWaitDstStageMask = &wait_stage;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &m_ImGuiCommandBuffers[currentFrame];
-	submitInfo.signalSemaphoreCount = 0;
-	submitInfo.pSignalSemaphores = NULL;
-
-	VkResult result = vkQueueSubmit(pUserInterface->pGraphicsQueue->pVkQueue, 1, &submitInfo, nullptr);
-
-
-
-	//cmd->pVkCmdBuf = m_ImGuiCommandBuffers[currentFrame];
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd->pVkCmdBuf);
+	//vkCmdEndRenderPass(m_ImGuiCommandBuffers[currentFrame]);
+	//vkEndCommandBuffer(m_ImGuiCommandBuffers[currentFrame]);
+	/*cmd->pVkCmdBuf = m_ImGuiCommandBuffers[currentFrame];*/
 	//cmd->pVkActiveRenderPass = m_ImGuiRenderPass;
 }
 
