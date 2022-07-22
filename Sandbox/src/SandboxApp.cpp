@@ -164,7 +164,7 @@ public:
 		//指令绘制
 		cmdDraw(cmd, 3, 0);
 
-		//vkCmdEndRenderPass(cmd->pVkCmdBuf);
+		vkCmdEndRenderPass(cmd->pVkCmdBuf);
 		//绘制UI
 		cmdDrawUserInterface(cmd,imageIndex,currentFrame, pInFlightFences[currentFrame]->pVkFence);
 		// 结束绘制

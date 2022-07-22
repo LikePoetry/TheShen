@@ -64,9 +64,8 @@ void createCommandPool()
 
 void createImGuiRenderPass()
 {
-
 	VkAttachmentDescription attachment = {};
-	attachment.format = pUserInterface->pSwapChain->pDesc->mImageFormat;
+	attachment.format = VK_FORMAT_B8G8R8A8_UNORM;
 	attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
