@@ -96,6 +96,7 @@ public:
 		uiRenderDesc.pGraphicsQueue = pGraphicsQueue;
 		uiRenderDesc.pSwapChain = pSwapChain;
 		uiRenderDesc.pRenderer = pRenderer;
+		uiRenderDesc.pCmdPool = pCmdPool;
 		initUserInterface(&uiRenderDesc);
 		createImGuiCommandBuffers(pTextures);
 		return true;
@@ -148,7 +149,6 @@ public:
 		acquireNextImage(pRenderer, pSwapChain, pImageAvailableSemaphores[currentFrame], pInFlightFences[currentFrame], &imageIndex);
 		//开始指令录制
 		Cmd* cmd = pCmds[currentFrame];
-
 		beginCmd(cmd);
 		//绑定到渲染子通道
 		cmdBindRenderPass(cmd, pRenderPass, pFrameBuffers[imageIndex]);
@@ -164,6 +164,7 @@ public:
 		//指令绘制
 		cmdDraw(cmd, 3, 0);
 
+		//vkCmdEndRenderPass(cmd->pVkCmdBuf);
 		//绘制UI
 		cmdDrawUserInterface(cmd,imageIndex,currentFrame, pInFlightFences[currentFrame]->pVkFence);
 		// 结束绘制

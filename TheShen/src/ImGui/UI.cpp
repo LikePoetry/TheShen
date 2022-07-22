@@ -10,14 +10,13 @@ typedef struct UserInterface
 	Renderer* pRenderer = NULL;
 	Queue* pGraphicsQueue = NULL;
 	SwapChain* pSwapChain = NULL;
+	CmdPool* pCmdPool = NULL;
 } UserInterface;
 
 static UserInterface* pUserInterface = NULL;
 
 VkDescriptorPool m_ImGuiDescriptorPool;
-VkCommandPool m_ImGuiCommandPool;
 VkRenderPass m_ImGuiRenderPass;
-std::vector<VkCommandBuffer> m_ImGuiCommandBuffers;
 std::vector<VkFramebuffer> m_ImGuiFramebuffers;
 
 
@@ -52,27 +51,28 @@ void createImGuiDescriptorPool()
 
 void createCommandPool()
 {
-	VkCommandPoolCreateInfo poolInfo{};
-	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	poolInfo.queueFamilyIndex = pUserInterface->pRenderer->pVkGraphicsQueueFamilyIndex;
+	//VkCommandPoolCreateInfo poolInfo{};
+	//poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	//poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	//poolInfo.queueFamilyIndex = pUserInterface->pRenderer->pVkGraphicsQueueFamilyIndex;
 
-	if (vkCreateCommandPool(pUserInterface->pRenderer->pVkDevice, &poolInfo, nullptr, &m_ImGuiCommandPool) != VK_SUCCESS) {
-		SHEN_CORE_ERROR("failed to create graphics command pool!");
-		throw std::runtime_error("failed to create graphics command pool!");
-	}
+	//if (vkCreateCommandPool(pUserInterface->pRenderer->pVkDevice, &poolInfo, nullptr, &m_ImGuiCommandPool) != VK_SUCCESS) {
+	//	SHEN_CORE_ERROR("failed to create graphics command pool!");
+	//	throw std::runtime_error("failed to create graphics command pool!");
+	//}
 }
 
 void createImGuiRenderPass()
 {
+
 	VkAttachmentDescription attachment = {};
-	attachment.format = VK_FORMAT_B8G8R8A8_SRGB;
+	attachment.format = pUserInterface->pSwapChain->pDesc->mImageFormat;
 	attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 	VkAttachmentReference color_attachment = {};
@@ -102,11 +102,7 @@ void createImGuiRenderPass()
 	info.pDependencies = &dependency;
 
 	if (vkCreateRenderPass(pUserInterface->pRenderer->pVkDevice, &info, nullptr, &m_ImGuiRenderPass) != VK_SUCCESS)
-	{
-		SHEN_CORE_ERROR("failed to create render pass!");
 		throw std::runtime_error("failed to create render pass!");
-	}
-
 }
 
 VkCommandBuffer beginSingleTimeCommands(const VkCommandPool& cmdPool) {
@@ -142,6 +138,35 @@ void endSingleTimeCommands(VkCommandBuffer commandBuffer, const VkCommandPool& c
 	vkFreeCommandBuffers(pUserInterface->pRenderer->pVkDevice, cmdPool, 1, &commandBuffer);
 }
 
+void createImGuiCommandBuffers(std::vector<Texture> pTextures)
+{
+	std::vector<VkImageView> swapChainImageViews;
+	swapChainImageViews.resize(pTextures.size());
+	for (size_t i = 0; i < pTextures.size(); i++)
+	{
+		swapChainImageViews[i] = pTextures[i].pVkSRVDescriptor;
+	}
+	m_ImGuiFramebuffers.resize(swapChainImageViews.size());
+
+	VkImageView attachment[1];
+	VkFramebufferCreateInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	info.renderPass = m_ImGuiRenderPass;
+	info.attachmentCount = 1;
+	info.pAttachments = attachment;
+	info.width = pUserInterface->pSwapChain->pDesc->mWidth;
+	info.height = pUserInterface->pSwapChain->pDesc->mHeight;
+	info.layers = 1;
+	for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
+	{
+		attachment[0] = swapChainImageViews[i];
+		if (vkCreateFramebuffer(pUserInterface->pRenderer->pVkDevice, &info, nullptr, &m_ImGuiFramebuffers[i]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+	}
+}
+
 
 /// <summary>
 ///	初始化用户接口
@@ -152,6 +177,8 @@ void initUserInterface(UserInterfaceDesc* pDesc)
 	pUserInterface->pRenderer = (Renderer*)pDesc->pRenderer;
 	pUserInterface->pGraphicsQueue = (Queue*)pDesc->pGraphicsQueue;
 	pUserInterface->pSwapChain = (SwapChain*)pDesc->pSwapChain;
+	pUserInterface->pCmdPool = (CmdPool*)pDesc->pCmdPool;
+
 	createImGuiDescriptorPool();
 
 	createCommandPool();
@@ -174,57 +201,12 @@ void initUserInterface(UserInterfaceDesc* pDesc)
 	init_info.CheckVkResultFn = nullptr;
 	ImGui_ImplVulkan_Init(&init_info, m_ImGuiRenderPass);
 
-	// Upload Fonts
+	 //Upload Fonts
 	{
-		VkCommandBuffer commandBuffer = beginSingleTimeCommands(m_ImGuiCommandPool);
+		VkCommandBuffer commandBuffer = beginSingleTimeCommands(pUserInterface->pCmdPool->pVkCmdPool);
 		ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-		endSingleTimeCommands(commandBuffer, m_ImGuiCommandPool);
+		endSingleTimeCommands(commandBuffer, pUserInterface->pCmdPool->pVkCmdPool);
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
-	}
-}
-
-
-void createImGuiCommandBuffers(std::vector<Texture> pTextures)
-{
-
-	std::vector<VkImageView> swapChainImageViews;
-	swapChainImageViews.resize(pTextures.size());
-	for (size_t i = 0; i < pTextures.size(); i++)
-	{
-		swapChainImageViews[i] = pTextures[i].pVkSRVDescriptor;
-	}
-
-	m_ImGuiCommandBuffers.resize(swapChainImageViews.size());
-
-	VkCommandBufferAllocateInfo allocInfo{};
-	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool = m_ImGuiCommandPool;
-	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = (uint32_t)m_ImGuiCommandBuffers.size();
-
-	if (vkAllocateCommandBuffers(pUserInterface->pRenderer->pVkDevice, &allocInfo, m_ImGuiCommandBuffers.data()) != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to allocate command buffers!");
-	}
-
-	m_ImGuiFramebuffers.resize(swapChainImageViews.size());
-
-	VkImageView attachment[1];
-	VkFramebufferCreateInfo info = {};
-	info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	info.renderPass = m_ImGuiRenderPass;
-	info.attachmentCount = 1;
-	info.pAttachments = attachment;
-	info.width = pUserInterface->pSwapChain->pDesc->mWidth;
-	info.height = pUserInterface->pSwapChain->pDesc->mHeight;
-	info.layers = 1;
-	for (uint32_t i = 0; i < swapChainImageViews.size(); i++)
-	{
-		attachment[0] = swapChainImageViews[i];
-		if (vkCreateFramebuffer(pUserInterface->pRenderer->pVkDevice, &info, nullptr, &m_ImGuiFramebuffers[i]) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create framebuffer!");
-		}
 	}
 }
 
@@ -259,10 +241,10 @@ void cmdDrawUserInterface(void* /* Cmd* */ pCmd, uint32_t imageIndex, uint32_t c
 	}
 
 	// vkResetCommandPool(m_Device, m_ImGuiCommandPool, 0);
-	VkCommandBufferBeginInfo info = {};
-	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	vkBeginCommandBuffer(cmd->pVkCmdBuf, &info);
+	//VkCommandBufferBeginInfo info = {};
+	//info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	//info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	//vkBeginCommandBuffer(cmd->pVkCmdBuf, &info);
 
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -276,8 +258,8 @@ void cmdDrawUserInterface(void* /* Cmd* */ pCmd, uint32_t imageIndex, uint32_t c
 	vkCmdBeginRenderPass(cmd->pVkCmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 	// Record dear imgui primitives into command buffer
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd->pVkCmdBuf);
-	//vkCmdEndRenderPass(m_ImGuiCommandBuffers[currentFrame]);
-	//vkEndCommandBuffer(m_ImGuiCommandBuffers[currentFrame]);
+	//vkCmdEndRenderPass(cmd->pVkCmdBuf);
+	//vkEndCommandBuffer(cmd->pVkCmdBuf);
 	/*cmd->pVkCmdBuf = m_ImGuiCommandBuffers[currentFrame];*/
 	//cmd->pVkActiveRenderPass = m_ImGuiRenderPass;
 }
